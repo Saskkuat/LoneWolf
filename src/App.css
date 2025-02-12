@@ -85,6 +85,21 @@ a:hover {
   text-decoration: underline;
 }
 
+figure {  
+  max-width: 386px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+figure .img-responsive {  
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
 .intro-content p {
   margin: 1em auto;
   text-align: justify;
@@ -99,17 +114,20 @@ a:hover {
   margin: 1em auto;
 }
 
+.table-books ul,
 .table-chapters ul {
   flex-direction: row;
   flex-wrap: wrap;
   display: flex;
 }
 
+.table-books ul li,
 .table-chapters ul li {  
   list-style-type: none;
   flex: 1 0 10%;
 }
 
+.table-books .text-content,
 .table-chapters .text-content {
   text-align: center;
 }

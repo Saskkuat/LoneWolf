@@ -3,9 +3,16 @@ import { useState, useEffect } from "react";
 import { Play, Pause, StopCircle, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function LoneWolfPWA() {
-  const [currentBook, setCurrentBook] = useState(() => {
-    return parseInt(localStorage.getItem("currentBook")) || null;
+  const validBooks = [
+    { id: 1, path: "FlightFromTheDark", sections: 350, en: "Flight form the dark", br: "Fuga da escuridão" },
+    { id: 2, path: "FireOnTheWater", sections: 350, en: "Fire on the water", br: "Fogo na água" },
+  ] ;
+  const [currentBookId, setCurrentBookId] = useState(() => {
+    return parseInt(localStorage.getItem("currentBookId")) || null;
   });
+  const [currentBookPath, setCurrentBookPath] = useState(null);
+  const [currentBookName, setCurrentBookName] = useState(null);
+  const [currentBookSections, setCurrentBookSections] = useState(null);
   const [currentSection, setCurrentSection] = useState(() => {
     return parseInt(localStorage.getItem("currentSection")) || null;
   });
@@ -19,8 +26,6 @@ export default function LoneWolfPWA() {
   const [audio, setAudio] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(currentSection !== null);
-  const [imageFiles, setImageFiles] = useState([]);
-  const [loadedImages, setLoadedImages] = useState({});
   const [audioProgress, setAudioProgress] = useState(0); // Progress bar state
   const [audioDuration, setAudioDuration] = useState(0); // Audio duration state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,8 +38,52 @@ export default function LoneWolfPWA() {
   const [result, setResult] = useState(null);
   const [isDiceSection, setIsDiceSection] = useState(false);
 
+  const setCurrentBookInfo = (bookId) => {
+    localStorage.setItem("currentBookId", bookId);
+    const book = validBooks.find(e => e.id === bookId);
+    setCurrentBookPath(book?.path);
+    setCurrentBookName(language == "br" ? book?.br : book?.en);
+    setCurrentBookSections(book?.sections);
+  }
+
+  const clearSections = () => {    
+    setVisitedSections([]);
+    localStorage.setItem("visitedSections", JSON.stringify([]));
+  }
+
+  const changeSelectedBook = (event) => {
+    clearSections();
+    setCurrentBookId(null);
+  }
+
+  const startAdventure = (event, section) => {
+
+    clearSections();
+
+    setHasStarted(true);
+    setCurrentSection(section || 0);
+  };
+
+  const changeLanguage = () => {
+    const newLanguage = language === "br" ? "en" : "br";
+    setLanguage(newLanguage);
+    localStorage.setItem("language", newLanguage);
+    stopAudio();
+  };
+
+  const resetSection = () => {    
+    localStorage.removeItem("currentSection");
+    stopAudio();
+    setCurrentSection(null);
+    setHasStarted(false);
+  };
+
   useEffect(() => {
-    setCurrentBook("FlightFromTheDark")
+    
+    setCurrentBookInfo(currentBookId);
+
+    if (currentBookId == null) return;
+
     if (currentSection === null) return;
     
     localStorage.setItem("currentSection", currentSection);
@@ -46,72 +95,10 @@ export default function LoneWolfPWA() {
     }
 
     fetchContent(currentSection);
+    fetchAudio(currentSection);
+    fixImagePath(currentBookPath);
 
-    stopAudio();
-
-    const newAudio = new Audio(`/${currentBook}/audio/${language}/${currentSection}.mp3`);
-    setAudio(newAudio);
-    setIsPlaying(false);
-
-    newAudio.play()
-      .then(() => setIsPlaying(true))
-      .catch((err) => console.log("Error playing audio:", err));
-
-    newAudio.addEventListener("ended", () => {
-      setIsPlaying(false); // Change to play button when audio ends
-    });
-
-    newAudio.addEventListener("timeupdate", () => {
-      setAudioProgress((newAudio.currentTime / newAudio.duration) * 100); // Update progress bar
-    });
-
-    newAudio.addEventListener("loadedmetadata", () => {
-      setAudioDuration(newAudio.duration); // Get audio duration
-    });
-
-    const fetchImages = async () => {
-      const images = [];
-      let index = 1;
-    
-      while (images.length == 0) {
-        const imagePath = `/${currentBook}/images/${currentSection}_${index}.gif`;
-        try {
-          const response = await fetch(imagePath, { method: "HEAD" });
-          if (!response.ok) break; // Stop checking if an image is not found
-          if(images.indexOf(imagePath) === -1) {
-            images.push(imagePath);
-            index++;
-          }
-        } catch {
-          break;
-        }
-      }
-
-      // Only update state if images have changed
-      setImageFiles((prevImages) => {
-        const newImageSet = new Set(images);
-        const prevImageSet = new Set(prevImages);
-
-        // Compare sets to avoid redundant updates
-        if (newImageSet.size !== prevImageSet.size || ![...newImageSet].every(img => prevImageSet.has(img))) {
-          return images;
-        }
-        return prevImages; // No update if identical
-      });
-    };
-
-    fetchImages();
-
-  }, [currentSection, language]);
-
-  const startAdventure = (event, section) => {
-    
-    setVisitedSections([]);
-    localStorage.setItem("visitedSections", JSON.stringify([]));
-
-    setHasStarted(true);
-    setCurrentSection(section || 0);
-  };
+  }, [currentBookId, currentSection, language]);
 
   const fetchContent = async (section, removeChoices) => {
 
@@ -121,7 +108,7 @@ export default function LoneWolfPWA() {
     setIsDiceSection(false);
     setResult(null);
 
-    fetch(`/${currentBook}/text/${language}/${section}.html`)
+    fetch(`/${currentBookPath}/text/${language}/${section}.html`)
       .then((res) => res.arrayBuffer())
       .then((buffer) => {
         const decoder = new TextDecoder(language === "br" ? "windows-1252" : "utf-8");
@@ -141,6 +128,11 @@ export default function LoneWolfPWA() {
           span.innerHTML = a.innerHTML;
           a.replaceWith(span);
         });
+        doc.querySelectorAll("figure img").forEach((i) => {
+          const src = i.getAttribute("src").replace("png", "gif");
+          i.setAttribute("src", `/${currentBookPath}/images/${src}`);
+        });
+        // Condition to set content for modal or main page
         if (setModalContent) {
           // Extract only text content (no audio/images)
           setSectionContents((prev) => ({
@@ -174,33 +166,37 @@ export default function LoneWolfPWA() {
       });
   }
 
-  const toggleSection = async (section) => {
-    if (expandedSection === section) {
-      setExpandedSection(null); // Collapse if the same section is clicked
-    } else {
-      if (!sectionContents[section]) {
-        fetchContent(section, true);
-      }
-      setExpandedSection(section); // Expand new section
-    }
-  };
+  const fetchAudio = async (section) => {
+
+    stopAudio();
+
+    const newAudio = new Audio(`/${currentBookPath}/audio/${language}/${section}.mp3`);
+    setAudio(newAudio);
+    setIsPlaying(false);
+
+    newAudio.play()
+      .then(() => setIsPlaying(true))
+      .catch((err) => console.log("Error playing audio:", err));
+
+    newAudio.addEventListener("ended", () => {
+      setIsPlaying(false); // Change to play button when audio ends
+    });
+
+    newAudio.addEventListener("timeupdate", () => {
+      setAudioProgress((newAudio.currentTime / newAudio.duration) * 100); // Update progress bar
+    });
+
+    newAudio.addEventListener("loadedmetadata", () => {
+      setAudioDuration(newAudio.duration); // Get audio duration
+    });
+  }
+
+  const fixImagePath = async (bookPath) => {
+    
+  }
 
   const toggleCombatRatio = () => {
     setExpandedCombatRatio(!expandedCombatRatio);
-  };
-
-  const resetSection = () => {    
-    localStorage.removeItem("currentSection");
-    stopAudio();
-    setCurrentSection(null);
-    setHasStarted(false);
-  };
-
-  const changeLanguage = () => {
-    const newLanguage = language === "br" ? "en" : "br";
-    setLanguage(newLanguage);
-    localStorage.setItem("language", newLanguage);
-    stopAudio();
   };
 
   const togglePlayPause = () => {
@@ -247,27 +243,6 @@ export default function LoneWolfPWA() {
     }
   };
 
-  const handleChoiceClick = (event) => {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    const newSection = parseInt(event.target.getAttribute("href").replace("sect", "").replace(".htm", ""));
-    const chapterSelection = event.target.parentElement.classList.contains('chapter');
-    stopAudio();
-    if (chapterSelection) {
-      startAdventure(event, newSection)
-    } else {
-      setCurrentSection(newSection);
-    }
-  };
-
-  const handleImageLoad = (src) => {
-    setLoadedImages((prev) => ({ ...prev, [src]: true }));
-  };
-
-  const handleImageError = (src) => {
-    setLoadedImages((prev) => ({ ...prev, [src]: false }));
-  };
-
   const rollDice = () => {
     if (rolling) return; // Prevent multiple rolls
 
@@ -284,12 +259,53 @@ export default function LoneWolfPWA() {
     }, 1500); // Duration matches CSS animation
   };
 
+  const toggleSection = async (section) => {
+    if (expandedSection === section) {
+      setExpandedSection(null); // Collapse if the same section is clicked
+    } else {
+      if (!sectionContents[section]) {
+        fetchContent(section, true);
+      }
+      setExpandedSection(section); // Expand new section
+    }
+  };
+
+  const stopDefaultHandler = (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    stopAudio();
+  }
+
+  const handleBookClick = (event) => {
+    stopDefaultHandler(event);
+    const bookId = parseInt(event.target.getAttribute("href").replace("book", "").replace(".html", ""));
+    setCurrentBookId(bookId);
+  }
+
+  const handleChapterClick = (event) => {
+    stopDefaultHandler(event);
+    const newSection = parseInt(event.target.getAttribute("href").replace("chapter", "").replace(".html", ""));
+    startAdventure(event, newSection);
+  }
+
+  const handleChoiceClick = (event) => {
+    stopDefaultHandler(event);
+    const newSection = parseInt(event.target.getAttribute("href").replace("sect", "").replace(".htm", ""));
+    setCurrentSection(newSection);
+  };
+
   useEffect(() => {
     const contentContainer = document.querySelector(".text-content");
     if (!contentContainer) return;
     
     contentContainer.addEventListener("click", (event) => {
-      if (event.target.matches(".choice a")) {
+      if (event.target.matches(".choice.book a")) {
+        handleBookClick(event);
+      }
+      if (event.target.matches(".choice.chapter a")) {
+        handleChapterClick(event);
+      }
+      if (event.target.matches(".choice:not(.book):not(.chapter) a")) {
         handleChoiceClick(event);
       }
     });
@@ -301,22 +317,43 @@ export default function LoneWolfPWA() {
 
   return (
     <div className="app-container flex flex-col items-center justify-center min-h-screen px-6">
-      {!hasStarted && (
+      {currentBookId == null && (
+        <div className="book-container">
+          <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
+          <br/>
+          <br/>
+          <div className="table-books">
+            <div className="text-content">
+              <br/>
+              {language == "br" ? "Selecione sua próxima aventura" : "Select your next adventure"}
+              <ul>
+                {validBooks.map((book, index) => (
+                  <li>
+                    <p key={book.id} className="choice book"><a href={"book" + book.id + ".html"}>{language == "br" ? book.br : book.en}</a></p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+      {currentBookId != null && !hasStarted && (
         <div className="start-container">
           <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
           <br/>
           <br/>
+          <button onClick={changeSelectedBook} className="ml-4 p-2 bg-red-500 vintage-button">{language === "br" ? "Selecionar outra livro" : "Select another book"}</button>
           <button onClick={startAdventure} className="start-button vintage-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
           <div className="table-chapters">
             <div className="text-content">
               <br/>
               {language == "br" ? "Ou selecione um capítulo abaixo" : "Or select a chapter below"}
               <ul>
-                {[...Array(351).keys()]
+                {[...Array((currentBookSections || 0) + 1).keys()]
                   .filter((section) => section !== 0) // Exclude section 0
                   .map((section) => (
                     <li>
-                      <p key={section} className="choice chapter"><a href={"sect" + section + ".html"}>{section}</a></p>
+                      <p key={section} className="choice chapter"><a href={"chapter" + section + ".html"}>{section}</a></p>
                     </li>
                 ))}
               </ul>
@@ -324,7 +361,7 @@ export default function LoneWolfPWA() {
           </div>
         </div>
       )}
-      {hasStarted && currentSection !== null && (
+      {currentBookId != null && hasStarted && currentSection !== null && (
         <div>
           <div className="vintage-buttons end">
             <button onClick={() => setIsModalOpen(true)} className="ml-4 p-2 bg-red-500 vintage-button left">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
@@ -380,7 +417,6 @@ export default function LoneWolfPWA() {
                     <RotateCcw className="w-5 h-5" />
                   </button>
                 </div>
-
                 {/* Audio Progress Bar */}
                 <div 
                   className="audio-progress-bar"
@@ -391,7 +427,6 @@ export default function LoneWolfPWA() {
                     style={{ width: `${audioProgress}%` }}
                   />
                 </div>
-
                 {/* Time display */}
                 <div className="audio-time">
                   <span>{formatTime(Math.floor(audioProgress / 100 * audioDuration))} / {formatTime(Math.floor(audioDuration))}</span>
@@ -408,22 +443,6 @@ export default function LoneWolfPWA() {
                 </div>
               )}
               <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
-              {imageFiles.length > 0 && (
-                  imageFiles.map((src, index) => (
-                    loadedImages[src] !== false && (
-                      <div className="section-images mt-4 flex flex-col items-center gap-4">
-                      <img 
-                        key={index}
-                        src={src} 
-                        alt={`Section Illustration ${index + 1}`} 
-                        className="max-w-full h-auto rounded-lg shadow" 
-                        onLoad={() => handleImageLoad(src)}
-                        onError={() => handleImageError(src)}
-                      />                    
-                    </div>
-                    )
-                  ))
-              )}
             </div>
             {isDiceSection && (
               <div className="dice-container">
