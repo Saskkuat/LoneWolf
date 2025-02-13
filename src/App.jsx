@@ -7,12 +7,13 @@ export default function LoneWolfPWA() {
     { id: 1, path: "FlightFromTheDark", sections: 350, en: "Flight form the dark", br: "Fuga da escuridão" },
     { id: 2, path: "FireOnTheWater", sections: 350, en: "Fire on the water", br: "Fogo na água" },
   ] ;
-  const [currentBookId, setCurrentBookId] = useState(() => {
-    return parseInt(localStorage.getItem("currentBookId")) || null;
+  const [currentBook, setCurrentBook] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("currentBook")) || null;
+    } catch (error) {
+      return null; // Fallback in case of corrupted storage
+    }
   });
-  const [currentBookPath, setCurrentBookPath] = useState(null);
-  const [currentBookName, setCurrentBookName] = useState(null);
-  const [currentBookSections, setCurrentBookSections] = useState(null);
   const [currentSection, setCurrentSection] = useState(() => {
     return parseInt(localStorage.getItem("currentSection")) || null;
   });
@@ -39,11 +40,14 @@ export default function LoneWolfPWA() {
   const [isDiceSection, setIsDiceSection] = useState(false);
 
   const setCurrentBookInfo = (bookId) => {
-    localStorage.setItem("currentBookId", bookId);
     const book = validBooks.find(e => e.id === bookId);
-    setCurrentBookPath(book?.path);
-    setCurrentBookName(language == "br" ? book?.br : book?.en);
-    setCurrentBookSections(book?.sections);
+    if (book) {    
+      localStorage.setItem("currentBook", JSON.stringify(book));
+    }
+    else {
+      localStorage.setItem("currentBook", null);
+    }
+    setCurrentBook(book);
   }
 
   const clearSections = () => {    
@@ -53,7 +57,8 @@ export default function LoneWolfPWA() {
 
   const changeSelectedBook = (event) => {
     clearSections();
-    setCurrentBookId(null);
+    setCurrentBook(null);
+    localStorage.removeItem("currentBook"); // <-- Ensure localStorage is cleared
   }
 
   const startAdventure = (event, section) => {
@@ -77,10 +82,10 @@ export default function LoneWolfPWA() {
   };
 
   useEffect(() => {
-    
-    setCurrentBookInfo(currentBookId);
 
-    if (currentBookId == null) return;
+    if (currentBook == null) return;
+    
+    localStorage.setItem("currentBook", JSON.stringify(currentBook));
 
     if (currentSection === null) return;
     
@@ -95,7 +100,7 @@ export default function LoneWolfPWA() {
     fetchContent(currentSection);
     fetchAudio(currentSection);
 
-  }, [currentBookId, currentSection, language]);
+  }, [currentBook, currentSection, language]);
 
   const fetchContent = async (section, removeChoices) => {
 
@@ -103,9 +108,10 @@ export default function LoneWolfPWA() {
     setIsCombatSection(false);
     setIsDeadEnd(false);
     setIsDiceSection(false);
-    setResult(null);
+    setResult(null);    
+    setExpandedCombatRatio(false);
 
-    fetch(`/${currentBookPath}/text/${language}/${section}.html`)
+    fetch(`/${currentBook.path}/text/${language}/${section}.html`)
       .then((res) => res.arrayBuffer())
       .then((buffer) => {
         const decoder = new TextDecoder(language === "br" ? "windows-1252" : "utf-8");
@@ -127,7 +133,7 @@ export default function LoneWolfPWA() {
         });
         doc.querySelectorAll("figure img").forEach((i) => {
           const src = i.getAttribute("src").replace("png", "gif");
-          i.setAttribute("src", `/${currentBookPath}/images/${src}`);
+          i.setAttribute("src", `/${currentBook.path}/images/${src}`);
         });
         // Condition to set content for modal or main page
         if (setModalContent) {
@@ -167,7 +173,7 @@ export default function LoneWolfPWA() {
 
     stopAudio();
 
-    const newAudio = new Audio(`/${currentBookPath}/audio/${language}/${section}.mp3`);
+    const newAudio = new Audio(`/${currentBook.path}/audio/${language}/${section}.mp3`);
     setAudio(newAudio);
     setIsPlaying(false);
 
@@ -271,7 +277,7 @@ export default function LoneWolfPWA() {
 
   const handleBookClick = (event) => {
     const bookId = parseInt(event.target.getAttribute("href").replace("book", "").replace(".html", ""));
-    setCurrentBookId(bookId);
+    setCurrentBookInfo(bookId);
   }
 
   const handleChapterClick = (event) => {
@@ -307,11 +313,11 @@ export default function LoneWolfPWA() {
     return () => {
       contentContainer.removeEventListener("click", handleChoiceClick);
     };
-  }, [currentBookId, content, currentSection]);
+  }, [currentBook, content, currentSection]);
 
   return (
     <div className="app-container flex flex-col items-center justify-center min-h-screen px-6">
-      {currentBookId == null && (
+      {currentBook == null && (
         <div className="book-container">
           <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
           <br/>
@@ -331,19 +337,20 @@ export default function LoneWolfPWA() {
           </div>
         </div>
       )}
-      {currentBookId != null && !hasStarted && (
+      {currentBook != null && !hasStarted && (
         <div className="start-container">
+          <p>{language == "br" ? currentBook.br : currentBook.en}</p>
           <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
           <br/>
           <br/>
-          <button onClick={changeSelectedBook} className="ml-4 p-2 bg-red-500 vintage-button">{language === "br" ? "Selecionar outra livro" : "Select another book"}</button>
+          <button onClick={changeSelectedBook} className="ml-4 p-2 bg-red-500 vintage-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
           <button onClick={startAdventure} className="start-button vintage-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
           <div className="table-chapters">
             <div className="text-content">
               <br/>
               {language == "br" ? "Ou selecione um capítulo abaixo" : "Or select a chapter below"}
               <ul>
-                {[...Array((currentBookSections || 0) + 1).keys()]
+                {[...Array((currentBook.sections || 0) + 1).keys()]
                   .filter((section) => section !== 0) // Exclude section 0
                   .map((section) => (
                     <li>
@@ -355,7 +362,7 @@ export default function LoneWolfPWA() {
           </div>
         </div>
       )}
-      {currentBookId != null && hasStarted && currentSection !== null && (
+      {currentBook != null && hasStarted && currentSection !== null && (
         <div>
           <div className="vintage-buttons end">
             <button onClick={() => setIsModalOpen(true)} className="ml-4 p-2 bg-red-500 vintage-button left">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
@@ -455,8 +462,8 @@ export default function LoneWolfPWA() {
                 </button>
                 {expandedCombatRatio && (
                   <div className="combat-ratio-tables">
-                    <img alt="Combat ratio table - negative" class="max-w-full h-auto rounded-lg shadow" src="images/crtneg.png"></img>
-                    <img alt="Combat ratio table - positive" class="max-w-full h-auto rounded-lg shadow" src="images/crtpos.png"></img>
+                    <img alt="Combat ratio table - negative" className="max-w-full h-auto rounded-lg shadow" src="images/crtneg.png"></img>
+                    <img alt="Combat ratio table - positive" className="max-w-full h-auto rounded-lg shadow" src="images/crtpos.png"></img>
                   </div>
                 )}
               </div>
