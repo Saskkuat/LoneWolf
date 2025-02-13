@@ -1,12 +1,10 @@
 import "./app.css";
+import booksData from './books.json';
 import { useState, useEffect } from "react";
 import { Play, Pause, StopCircle, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function LoneWolfPWA() {
-  const validBooks = [
-    { id: 1, path: "FlightFromTheDark", sections: 350, en: "Flight form the dark", br: "Fuga da escuridão" },
-    { id: 2, path: "FireOnTheWater", sections: 350, en: "Fire on the water", br: "Fogo na água" },
-  ] ;
+  const validBooks = booksData;
   const [currentBook, setCurrentBook] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("currentBook")) || null;
@@ -26,7 +24,7 @@ export default function LoneWolfPWA() {
   const [content, setContent] = useState("");
   const [audio, setAudio] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasStarted, setHasStarted] = useState(currentSection !== null);
+  const [hasStarted, setHasStarted] = useState(currentSection);
   const [audioProgress, setAudioProgress] = useState(0); // Progress bar state
   const [audioDuration, setAudioDuration] = useState(0); // Audio duration state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,11 +81,11 @@ export default function LoneWolfPWA() {
 
   useEffect(() => {
 
-    if (currentBook == null) return;
+    if (!currentBook) return;
     
     localStorage.setItem("currentBook", JSON.stringify(currentBook));
 
-    if (currentSection === null) return;
+    if (!currentSection) return;
     
     localStorage.setItem("currentSection", currentSection);
 
@@ -275,8 +273,8 @@ export default function LoneWolfPWA() {
     stopAudio();
   }
 
-  const handleBookClick = (event) => {
-    const bookId = parseInt(event.target.getAttribute("href").replace("book", "").replace(".html", ""));
+  const handleBookClick = (bookSelector) => {
+    const bookId = parseInt(bookSelector.dataset["bookId"]);
     setCurrentBookInfo(bookId);
   }
 
@@ -290,17 +288,21 @@ export default function LoneWolfPWA() {
     setCurrentSection(newSection);
   };
 
+  // Set handlers
   useEffect(() => {
     const contentContainer = document.querySelector(".text-content");
     if (!contentContainer) return;
     
     contentContainer.addEventListener("click", (event) => {
+
       if (event.target.matches(".choice a")) {
         stopDefaultHandler(event);
       }
 
-      if (event.target.matches(".choice.book a")) {
-        handleBookClick(event);
+      const bookSelector = event.target.closest('.content.choice.book');
+
+      if (bookSelector) {
+        handleBookClick(bookSelector);
       }
       else if (event.target.matches(".choice.chapter a")) {
         handleChapterClick(event);
@@ -315,31 +317,181 @@ export default function LoneWolfPWA() {
     };
   }, [currentBook, content, currentSection]);
 
+  useEffect(() => {
+    if (!validBooks || validBooks.length == 0) return;
+    if (currentBook) return;
+
+    var slider = document.getElementById("slider"),
+        sliderItems = document.getElementById("items"),
+        prev = document.getElementById("prev"),
+        next = document.getElementById("next");
+
+    slide(slider, sliderItems, prev, next);
+
+    function slide(wrapper, items, prev, next) {
+      var posX1 = 0,
+        posX2 = 0,
+        posInitial,
+        posFinal,
+        threshold = 100,
+        slides = items.getElementsByClassName("slide"),
+        slidesLength = slides.length,
+        slideSize = items.getElementsByClassName("slide")[0].offsetWidth,
+        firstSlide = slides[0],
+        lastSlide = slides[slidesLength - 1],
+        cloneFirst = firstSlide.cloneNode(true),
+        cloneLast = lastSlide.cloneNode(true),
+        index = 0,
+        allowShift = true;
+
+      // Clone first and last slide
+      items.appendChild(cloneFirst);
+      items.insertBefore(cloneLast, firstSlide);
+      wrapper.classList.add("loaded");
+
+      // Mouse and Touch events
+      items.onmousedown = dragStart;
+
+      // Touch events
+      items.addEventListener("touchstart", dragStart);
+      items.addEventListener("touchend", dragEnd);
+      items.addEventListener("touchmove", dragAction);
+
+      // Click events
+      prev.addEventListener("click", function () {
+        shiftSlide(-1);
+      });
+      next.addEventListener("click", function () {
+        shiftSlide(1);
+      });
+
+      // Transition events
+      items.addEventListener("transitionend", checkIndex);
+
+      function dragStart(e) {
+        e = e || window.event;
+        e.preventDefault();
+        posInitial = items.offsetLeft;
+
+        if (e.type == "touchstart") {
+          posX1 = e.touches[0].clientX;
+        } else {
+          posX1 = e.clientX;
+          document.onmouseup = dragEnd;
+          document.onmousemove = dragAction;
+        }
+      }
+
+      function dragAction(e) {
+        e = e || window.event;
+
+        if (e.type == "touchmove") {
+          posX2 = posX1 - e.touches[0].clientX;
+          posX1 = e.touches[0].clientX;
+        } else {
+          posX2 = posX1 - e.clientX;
+          posX1 = e.clientX;
+        }
+        items.style.left = items.offsetLeft - posX2 + "px";
+      }
+
+      function dragEnd(e) {
+        posFinal = items.offsetLeft;
+        if (posFinal - posInitial < -threshold) {
+          shiftSlide(1, "drag");
+        } else if (posFinal - posInitial > threshold) {
+          shiftSlide(-1, "drag");
+        } else {
+          items.style.left = posInitial + "px";
+        }
+
+        document.onmouseup = null;
+        document.onmousemove = null;
+      }
+
+      function shiftSlide(dir, action) {
+        items.classList.add("shifting");
+
+        if (allowShift) {
+          if (!action) {
+            posInitial = items.offsetLeft;
+          }
+
+          if (dir == 1) {
+            items.style.left = posInitial - slideSize + "px";
+            index++;
+          } else if (dir == -1) {
+            items.style.left = posInitial + slideSize + "px";
+            index--;
+          }
+        }
+
+        allowShift = false;
+      }
+
+      function checkIndex() {
+        items.classList.remove("shifting");
+
+        if (index == -1) {
+          items.style.left = -(slidesLength * slideSize) + "px";
+          index = slidesLength - 1;
+        }
+
+        if (index == slidesLength) {
+          items.style.left = -(1 * slideSize) + "px";
+          index = 0;
+        }
+
+        allowShift = true;
+      }
+    }
+  },[validBooks, currentBook]);
+
   return (
-    <div className="app-container flex flex-col items-center justify-center min-h-screen px-6">
-      {currentBook == null && (
+    <div className={`app-container flex flex-col items-center justify-center min-h-screen px-6 ${!currentBook ? "carousell" : ""}`}>
+      {!currentBook && (
         <div className="book-container">
           <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
           <br/>
           <br/>
+          <p style={{fontSize: "1.2em"}}>{language == "br" ? "Selecione sua próxima aventura" : "Select your next adventure"}</p>
+          <br/>
           <div className="table-books">
-            <div className="text-content">
+            <div className="text-content" style={{position: "relative"}}>
               <br/>
-              {language == "br" ? "Selecione sua próxima aventura" : "Select your next adventure"}
-              <ul>
-                {validBooks.map((book, index) => (
-                  <li>
-                    <p key={book.id} className="choice book"><a href={"book" + book.id + ".html"}>{language == "br" ? book.br : book.en}</a></p>
-                  </li>
-                ))}
-              </ul>
+              <div id="slider" className="slider">
+                <div className="wrapper">
+                  <div id="items" className="items">
+                  {validBooks && validBooks.map((book, index) => (
+                    <span className="slide" key={index}>
+                      <div className="content choice book" data-book-id={book.id}>
+                        <div className="container">
+                          <div className="up">
+                            <div className="cover" style={{backgroundImage: `url("/images/${book.path}.webp")`}}>
+                              <div className="year">
+                                <p>{book.year}</p>
+                              </div>
+                            </div>
+                            <div className="name">
+                              {book[`name-${language}`]}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </span>
+                  ))}
+                  </div>
+                </div>
+                <a id="prev" className="control prev"></a>
+                <a id="next" className="control next"></a>
+              </div>
             </div>
           </div>
         </div>
       )}
-      {currentBook != null && !hasStarted && (
+      {currentBook && !hasStarted && (
         <div className="start-container">
-          <p>{language == "br" ? currentBook.br : currentBook.en}</p>
+          <p className="book-title">{currentBook[`name-${language}`]}</p>
           <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
           <br/>
           <br/>
@@ -362,7 +514,7 @@ export default function LoneWolfPWA() {
           </div>
         </div>
       )}
-      {currentBook != null && hasStarted && currentSection !== null && (
+      {currentBook && hasStarted && currentSection && (
         <div>
           <div className="vintage-buttons end">
             <button onClick={() => setIsModalOpen(true)} className="ml-4 p-2 bg-red-500 vintage-button left">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>

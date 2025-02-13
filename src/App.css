@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Caudex:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caudex:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css?family=IM+Fell+English');
 
 * {
@@ -21,13 +21,25 @@ body {
   padding: 10px;
 }
 
+p.book-title { 
+  margin: 1em auto; 
+  font-family: "Caudex", serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 3em;
+}
+
 .app-container {
-  width: 85vw;
   max-width: 90vw;
   background-size: cover;
   border-radius: 5px;
   overflow: hidden;
   padding: 0 30px;
+}
+
+.app-container.carousell {
+  height: 85vh;
+  width: 85vw;
 }
 
 .firstLetter {
@@ -57,9 +69,13 @@ body {
   vertical-align: -webkit-baseline-middle;
 }
 
-.choice, .puzzle, .deadend, .combat {
+.choice:not(.content), .puzzle, .deadend, .combat {
   text-align: left !important;
   margin-left: 1rem !important;
+}
+
+.choice.chapter {
+  text-align: center !important;
 }
 
 .combat {
@@ -470,4 +486,191 @@ section#footnotes {
   padding-top: 0.5rem;
   font-size: smaller;
   font-style: italic;
+}
+
+.slider {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translate(-50%, 0%);
+  width: 400px;
+  height: 270px;
+  /*   box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2); */
+}
+
+.wrapper {
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  border-radius: 10px;
+}
+
+#items {
+  width: 10000px;
+  position: relative;
+  top: 0;
+  left: -400px;
+}
+
+#items.shifting {
+  transition: left 0.2s ease-out;
+}
+
+.slide {
+  width: 400px;
+  height: 550px;
+  cursor: pointer;
+  float: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all 1s;
+  position: relative;
+}
+
+.slider.loaded .slide:nth-child(2),
+.slider.loaded .slide:nth-child(7) {
+  border-radius: 10px;
+}
+.slider.loaded .slide:nth-child(1),
+.slider.loaded .slide:nth-child(6) {
+  border-radius: 10px;
+}
+.slider.loaded .slide:nth-child(3) {
+  border-radius: 10px;
+}
+.slider.loaded .slide:nth-child(4) {
+  border-radius: 10px;
+}
+.slider.loaded .slide:nth-child(5) {
+  border-radius: 10px;
+}
+
+.content {
+  width: 400px;
+  height: 560px;
+  border-radius: 10px;
+  box-shadow: 0 6px 6px rgba(0, 0, 0, 0), 0 0 30px rgba(0, 0, 0, 0.1) inset;
+  position: relative;
+  margin-top: 0px;
+  /* background-image: url("/images/black-wood.jpg");
+  background-size: cover; */
+}
+
+.wrapper {
+  
+  background-image: url("/images/black-wood.jpg");
+  background-size: cover;
+}
+
+.slide .content .container {
+  height: 97%;
+  width: 93%;
+  margin: 1em auto;
+}
+
+.slide .content .up {
+  width: 100%;
+  height: 85%;
+  border-radius: 10px 10px 0 0;
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  border-radius: 10px;
+}
+
+.year {
+  width: 0px;
+  height: 70px;
+  border-radius: 2px;
+  border-left: 50px solid #ff1f45;
+  border-right: 50px solid #ff1f45;
+  border-bottom: 15px solid transparent;
+  float: right;
+  margin-right: 15px;
+  top: -5px;
+  position: relative;
+}
+
+.year p {
+  color: #ffffff;
+  width: 47px;
+  float: right;
+  font-size: 2em;
+  font-weight: bold;
+  margin-top: -5px;
+}
+
+.name {
+  text-align: center;
+  margin: auto !important; 
+  font-family: "Caudex", serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1.8em;
+  color: rgb(231, 229, 229);
+}
+
+.control {
+  position: absolute;
+  top: 100%;
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  border-radius: 20px;
+  margin-top: -20px;
+  box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+.prev,
+.next {
+  background-size: 22px;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.prev {
+  background-image: url(https://cdn0.iconfinder.com/data/icons/navigation-set-arrows-part-one/32/ChevronLeft-512.png);
+  left: -20px;
+}
+
+.next {
+  background-image: url(https://cdn0.iconfinder.com/data/icons/navigation-set-arrows-part-one/32/ChevronRight-512.png);
+  right: -20px;
+}
+
+.prev:active,
+.next:active {
+  transform: scale(0.8);
+}
+
+.slide .button {
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  display: inline-block;
+  text-align: center;
+  width: 200px;
+  font-weight: bold;
+  padding: .7em 0px;
+  color: #ffffff;
+  border-radius: 5px;
+  position: relative;
+  box-shadow: 0 0px 6px rgba(0, 0, 0, 0.16), 0 0px 6px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
+  margin-left: calc(150px - 50px);
+  top: 0;
+}
+
+.slide .button .vintage-button {
+  width: 100%;
+  height: 100%;
 }

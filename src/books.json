@@ -1,0 +1,18 @@
+[
+    { 
+        "id": 1, 
+        "path": "FlightFromTheDark", 
+        "sections": 350, 
+        "name-en": "Flight from the dark", 
+        "name-br": "Fuga da escuridão",
+        "year": 1984
+    },
+    { 
+        "id": 2, 
+        "path": "FireOnTheWater", 
+        "sections": 350, 
+        "name-en": "Fire on the water", 
+        "name-br":  "Fogo na água",
+        "year": 1984
+    }
+  ]
