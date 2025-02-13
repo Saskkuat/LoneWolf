@@ -85,7 +85,7 @@ export default function LoneWolfPWA() {
     
     localStorage.setItem("currentBook", JSON.stringify(currentBook));
 
-    if (!currentSection) return;
+    if (currentSection === null) return;
     
     localStorage.setItem("currentSection", currentSection);
 
@@ -94,7 +94,6 @@ export default function LoneWolfPWA() {
       setVisitedSections(updatedSections);
       localStorage.setItem("visitedSections", JSON.stringify(updatedSections));
     }
-
     fetchContent(currentSection);
     fetchAudio(currentSection);
 
@@ -350,12 +349,12 @@ export default function LoneWolfPWA() {
       wrapper.classList.add("loaded");
 
       // Mouse and Touch events
-      items.onmousedown = dragStart;
+      //items.onmousedown = dragStart;
 
       // Touch events
-      items.addEventListener("touchstart", dragStart);
-      items.addEventListener("touchend", dragEnd);
-      items.addEventListener("touchmove", dragAction);
+      // items.addEventListener("touchstart", dragStart);
+      // items.addEventListener("touchend", dragEnd);
+      // items.addEventListener("touchmove", dragAction);
 
       // Click events
       prev.addEventListener("click", function () {
@@ -494,13 +493,12 @@ export default function LoneWolfPWA() {
           <p className="book-title">{currentBook[`name-${language}`]}</p>
           <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
           <br/>
-          <br/>
           <button onClick={changeSelectedBook} className="ml-4 p-2 bg-red-500 vintage-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
           <button onClick={startAdventure} className="start-button vintage-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
           <div className="table-chapters">
             <div className="text-content">
               <br/>
-              {language == "br" ? "Ou selecione um capítulo abaixo" : "Or select a chapter below"}
+              {language == "br" ? "Ou selecione um capítulo" : "Or select a chapter"}
               <ul>
                 {[...Array((currentBook.sections || 0) + 1).keys()]
                   .filter((section) => section !== 0) // Exclude section 0
@@ -514,7 +512,7 @@ export default function LoneWolfPWA() {
           </div>
         </div>
       )}
-      {currentBook && hasStarted && currentSection && (
+      {currentBook && hasStarted && currentSection != null && (
         <div>
           <div className="vintage-buttons end">
             <button onClick={() => setIsModalOpen(true)} className="ml-4 p-2 bg-red-500 vintage-button left">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
