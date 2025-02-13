@@ -57,9 +57,7 @@ export default function LoneWolfPWA() {
   }
 
   const startAdventure = (event, section) => {
-
     clearSections();
-
     setHasStarted(true);
     setCurrentSection(section || 0);
   };
@@ -96,7 +94,6 @@ export default function LoneWolfPWA() {
 
     fetchContent(currentSection);
     fetchAudio(currentSection);
-    fixImagePath(currentBookPath);
 
   }, [currentBookId, currentSection, language]);
 
@@ -191,10 +188,6 @@ export default function LoneWolfPWA() {
     });
   }
 
-  const fixImagePath = async (bookPath) => {
-    
-  }
-
   const toggleCombatRatio = () => {
     setExpandedCombatRatio(!expandedCombatRatio);
   };
@@ -277,19 +270,16 @@ export default function LoneWolfPWA() {
   }
 
   const handleBookClick = (event) => {
-    stopDefaultHandler(event);
     const bookId = parseInt(event.target.getAttribute("href").replace("book", "").replace(".html", ""));
     setCurrentBookId(bookId);
   }
 
   const handleChapterClick = (event) => {
-    stopDefaultHandler(event);
     const newSection = parseInt(event.target.getAttribute("href").replace("chapter", "").replace(".html", ""));
     startAdventure(event, newSection);
   }
 
   const handleChoiceClick = (event) => {
-    stopDefaultHandler(event);
     const newSection = parseInt(event.target.getAttribute("href").replace("sect", "").replace(".htm", ""));
     setCurrentSection(newSection);
   };
@@ -299,13 +289,17 @@ export default function LoneWolfPWA() {
     if (!contentContainer) return;
     
     contentContainer.addEventListener("click", (event) => {
+      if (event.target.matches(".choice a")) {
+        stopDefaultHandler(event);
+      }
+
       if (event.target.matches(".choice.book a")) {
         handleBookClick(event);
       }
-      if (event.target.matches(".choice.chapter a")) {
+      else if (event.target.matches(".choice.chapter a")) {
         handleChapterClick(event);
       }
-      if (event.target.matches(".choice:not(.book):not(.chapter) a")) {
+      else if (event.target.matches(".choice:not(.book):not(.chapter) a")) {
         handleChoiceClick(event);
       }
     });
@@ -313,7 +307,7 @@ export default function LoneWolfPWA() {
     return () => {
       contentContainer.removeEventListener("click", handleChoiceClick);
     };
-  }, [content, currentSection]);
+  }, [currentBookId, content, currentSection]);
 
   return (
     <div className="app-container flex flex-col items-center justify-center min-h-screen px-6">

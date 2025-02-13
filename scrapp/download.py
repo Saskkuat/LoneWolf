@@ -6,20 +6,19 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urljoin, urlparse
 
 # Configurable start section
-START_SECTION = 1  # Modify for other books
+START_SECTION = 0  # Modify for other books
 
 # Configurable total sections
 TOTAL_SECTIONS = 350  # Modify for other books
 
 # Configurable book id and name
-BOOK_ID = "01fftd"
-BOOK_NAME = "FlightFromTheDark"
+BOOK_ID = "02fotw"
+BOOK_NAME = "FireOnTheWater"
 # 01fftd - FlightFromTheDark
 # 02fotw - FireOnTheWater
 
 # Base URL for scraping
-BASE_URL = "https://www.projectaon.org/en/xhtml/lw/{BOOK_ID}/sect{}.htm"
-IMAGE_BASE_URL = "https://www.projectaon.org/en/xhtml/lw/{BOOK_ID}/"
+BASE_URL = rf"https://www.projectaon.org/en/xhtml/lw/{BOOK_ID}/"
 
 # Folder structure
 HTML_FOLDER = rf"..\public\{BOOK_NAME}\text\en"
@@ -56,7 +55,8 @@ def download_image(img_url):
 
 def scrape_and_save(section_number):
     """Scrape text and images from the section and save them as HTML."""
-    url = BASE_URL.format(section_number)
+    url = BASE_URL + "tssf.htm" if section_number == 0 else section_number + ".htm"
+    print(f"\n{url}")
     file_name = f"{section_number}.html"
     file_path = os.path.join(HTML_FOLDER, file_name)
 
@@ -85,7 +85,7 @@ def scrape_and_save(section_number):
             for img in images:
                 img_src = img.get("src")
                 if img_src:
-                    img_url = urljoin(IMAGE_BASE_URL, img_src)
+                    img_url = urljoin(BASE_URL, img_src)
                     download_image(img_url)
 
         if section:

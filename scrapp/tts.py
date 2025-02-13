@@ -11,7 +11,7 @@ BOOK_NAME = "FireOnTheWater"
 # FireOnTheWater
 
 # Configuration
-LANGUAGE = "BR"  # Change to "EN" or "BR"
+LANGUAGE = "EN"  # Change to "EN" or "BR"
 TEXT_FOLDER = rf"..\public\{BOOK_NAME}\text\{LANGUAGE.lower()}"
 AUDIO_FOLDER = os.path.join(TEXT_FOLDER, "..", "..", "audio", LANGUAGE.lower())
 os.makedirs(AUDIO_FOLDER, exist_ok=True)
@@ -94,6 +94,7 @@ def main():
     
     print("[>] Starting TTS processing for all files...")
     for idx, file in enumerate(files, start=1):
+        # if idx > 1: break
         file_path = os.path.join(TEXT_FOLDER, file)
         output_path = os.path.join(AUDIO_FOLDER, file.replace(".html", ".mp3"))
         print(f"[{idx}/{len(files)}] Processing: {file}")

@@ -10,12 +10,12 @@ from deep_translator import GoogleTranslator
 from bs4 import BeautifulSoup
 
 # Configurable book name
-BOOK_NAME = "FlightFromTheDark"
+BOOK_NAME = "FireOnTheWater"
 # FlightFromTheDark
 # FireOnTheWater
 
 # Folder paths
-TEXT_FOLDER = rf"..\public\{}\text\{}"
+TEXT_FOLDER = r"..\public\{}\text\{}"
 EN_TEXT_FOLDER = TEXT_FOLDER.format(BOOK_NAME, "en")
 BR_TEXT_FOLDER = TEXT_FOLDER.format(BOOK_NAME, "br")
 os.makedirs(BR_TEXT_FOLDER, exist_ok=True)
@@ -58,6 +58,7 @@ if __name__ == "__main__":
     print("\n🌍 Starting HTML translation process...\n")
 
     for idx, file in enumerate(files, start=1):
+        # if idx > 1: break
         process_html_file(file, idx, total_files)
 
     print("\n✅ HTML Translation completed! 🌍🔥")
