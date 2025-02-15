@@ -677,6 +677,11 @@ section#footnotes {
   margin-bottom: 10px;
 }
 
+cite {
+  font-style: italic;
+  font-size: larger;
+}
+
 /* Media Query for Medium Screens (tablets) */
 @media (max-width: 575px) {
   .app-container {

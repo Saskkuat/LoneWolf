@@ -12,7 +12,31 @@
         "path": "FireOnTheWater", 
         "sections": 350, 
         "name-en": "Fire on the water", 
-        "name-br":  "Fogo na água",
+        "name-br": "Fogo na água",
         "year": 1984
+    },
+    { 
+        "id": 3, 
+        "path": "TheCavernsOfKalte", 
+        "sections": 350, 
+        "name-en": "The caverns of Kalte", 
+        "name-br": "As cavernas de Kalte",
+        "year": 1984
+    },
+    { 
+        "id": 4, 
+        "path": "TheChasmOfDoom", 
+        "sections": 350, 
+        "name-en": "The chasm of doom", 
+        "name-br": "O abismo da perdição",
+        "year": 1985
+    },
+    { 
+        "id": 5, 
+        "path": "ShadowOnTheSand", 
+        "sections": 400, 
+        "name-en": "Shadow on the sand", 
+        "name-br": "Sombra na areia",
+        "year": 1985
     }
   ]

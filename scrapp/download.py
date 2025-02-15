@@ -9,13 +9,16 @@ from urllib.parse import urljoin, urlparse
 START_SECTION = 0  # Modify for other books
 
 # Configurable total sections
-TOTAL_SECTIONS = 350  # Modify for other books
+TOTAL_SECTIONS = 400  # Modify for other books
 
 # Configurable book id and name
-BOOK_ID = "02fotw"
-BOOK_NAME = "FireOnTheWater"
+BOOK_ID = "05sots"
+BOOK_NAME = "ShadowOnTheSand"
 # 01fftd - FlightFromTheDark
 # 02fotw - FireOnTheWater
+# 03tcok - TheCavernsOfKalte
+# 04tcod - TheChasmOfDoom
+# 05sots - ShadowOnTheSand -- 400 SECTIONS
 
 # Base URL for scraping
 BASE_URL = rf"https://www.projectaon.org/en/xhtml/lw/{BOOK_ID}/"
@@ -55,8 +58,7 @@ def download_image(img_url):
 
 def scrape_and_save(section_number):
     """Scrape text and images from the section and save them as HTML."""
-    url = BASE_URL + "tssf.htm" if section_number == 0 else section_number + ".htm"
-    print(f"\n{url}")
+    url = f"{BASE_URL}{'tssf' if section_number == 0 else f'sect{section_number}'}.htm"
     file_name = f"{section_number}.html"
     file_path = os.path.join(HTML_FOLDER, file_name)
 

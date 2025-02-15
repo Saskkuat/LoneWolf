@@ -6,12 +6,15 @@ from pydub import AudioSegment
 from bs4 import BeautifulSoup
 
 # Configurable book name
-BOOK_NAME = "FireOnTheWater"
+BOOK_NAME = "ShadowOnTheSand"
 # FlightFromTheDark
 # FireOnTheWater
+# TheCavernsOfKalte
+# TheChasmOfDoom
+# ShadowOnTheSand
 
 # Configuration
-LANGUAGE = "EN"  # Change to "EN" or "BR"
+LANGUAGE = "BR"  # Change to "EN" or "BR"
 TEXT_FOLDER = rf"..\public\{BOOK_NAME}\text\{LANGUAGE.lower()}"
 AUDIO_FOLDER = os.path.join(TEXT_FOLDER, "..", "..", "audio", LANGUAGE.lower())
 os.makedirs(AUDIO_FOLDER, exist_ok=True)
