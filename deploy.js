@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import simpleGit from 'simple-git';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process'; // ES Module import for execSync
+import { execSync } from 'child_process';
 
 // Get the current directory using import.meta.url
 const __filename = fileURLToPath(import.meta.url);
@@ -25,16 +25,15 @@ async function deploy() {
     // Checkout to the `gh-pages` branch
     await git.checkout(ghPagesBranch);
 
-    // Remove all files (to avoid merge conflicts)
-    await git.raw(['rm', '-rf', '.']);
+    // Remove specific files and folders
+    removeFilesAndFolders([
+      path.join(__dirname, 'assets'),
+      path.join(__dirname, 'index.html'),
+      path.join(__dirname, 'vite.svg'),
+    ]);
     
     // Copy all files from `dist/` to the current directory
-    const distFiles = fs.readdirSync(distFolder);
-    distFiles.forEach(file => {
-      const filePath = path.join(distFolder, file);
-      const targetPath = path.join(__dirname, file);
-      fs.copyFileSync(filePath, targetPath);
-    });
+    copyDirectory(distFolder, __dirname);
 
     // Commit and push the changes to `gh-pages`
     await git.add('.');
@@ -45,6 +44,45 @@ async function deploy() {
   } catch (error) {
     console.error('Error during deployment:', error);
   }
+}
+
+// Function to remove specific files and folders
+function removeFilesAndFolders(paths) {
+  paths.forEach((item) => {
+    if (fs.existsSync(item)) {
+      const stats = fs.statSync(item);
+      if (stats.isDirectory()) {
+        // If it's a directory, remove it recursively
+        fs.rmdirSync(item, { recursive: true });
+      } else {
+        // If it's a file, remove it
+        fs.unlinkSync(item);
+      }
+    }
+  });
+}
+
+// Function to copy directories and files recursively
+function copyDirectory(source, target) {
+  const files = fs.readdirSync(source);
+  
+  files.forEach(file => {
+    const srcPath = path.join(source, file);
+    const targetPath = path.join(target, file);
+    const stats = fs.statSync(srcPath);
+
+    if (stats.isDirectory()) {
+      // Create the directory if it doesn't exist
+      if (!fs.existsSync(targetPath)) {
+        fs.mkdirSync(targetPath);
+      }
+      // Recursively copy subdirectories
+      copyDirectory(srcPath, targetPath);
+    } else {
+      // Copy the file
+      fs.copyFileSync(srcPath, targetPath);
+    }
+  });
 }
 
 deploy();
