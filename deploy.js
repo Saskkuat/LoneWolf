@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import simpleGit from 'simple-git';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process'; // ES Module import for execSync
 
 // Get the current directory using import.meta.url
 const __filename = fileURLToPath(import.meta.url);
@@ -16,7 +17,6 @@ const ghPagesBranch = 'gh-pages';
 
 // Step 1: Run build command (optional)
 console.log('Building the project...');
-const execSync = require('child_process').execSync;
 execSync('npm run build', { stdio: 'inherit' });
 
 // Step 2: Copy `dist` to `gh-pages` branch
