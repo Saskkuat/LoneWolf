@@ -108,7 +108,7 @@ export default function LoneWolfPWA() {
     setResult(null);    
     setExpandedCombatRatio(false);
 
-    fetch(`/${currentBook.path}/text/${language}/${section}.html`)
+    fetch(`./${currentBook.path}/text/${language}/${section}.html`)
       .then((res) => res.arrayBuffer())
       .then((buffer) => {
         const decoder = new TextDecoder(language === "br" ? "windows-1252" : "utf-8");
@@ -130,7 +130,7 @@ export default function LoneWolfPWA() {
         });
         doc.querySelectorAll("figure img").forEach((i) => {
           const src = i.getAttribute("src").replace("png", "gif");
-          i.setAttribute("src", `/${currentBook.path}/images/${src}`);
+          i.setAttribute("src", `./${currentBook.path}/images/${src}`);
         });
         // Condition to set content for modal or main page
         if (setModalContent) {
@@ -170,7 +170,7 @@ export default function LoneWolfPWA() {
 
     stopAudio();
 
-    const newAudio = new Audio(`/${currentBook.path}/audio/${language}/${section}.mp3`);
+    const newAudio = new Audio(`./${currentBook.path}/audio/${language}/${section}.mp3`);
     setAudio(newAudio);
     setIsPlaying(false);
 
@@ -466,7 +466,7 @@ export default function LoneWolfPWA() {
                       <div className="content choice book" data-book-id={book.id}>
                         <div className="container">
                           <div className="up">
-                            <div className="cover" style={{backgroundImage: `url("/images/${book.path}.webp")`}}>
+                            <div className="cover" style={{backgroundImage: `url("./images/${book.path}.webp")`}}>
                               <div className="year">
                                 <p>{book.year}</p>
                               </div>
