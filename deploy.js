@@ -1,6 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import simpleGit from 'simple-git';
+import { fileURLToPath } from 'url';
+
+// Get the current directory using import.meta.url
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const git = simpleGit();
 
