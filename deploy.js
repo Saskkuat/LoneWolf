@@ -33,8 +33,8 @@ async function deploy() {
 
     // Commit and push the changes to `gh-pages`
     await git.add('.');
-    await git.commit('Deploying to GitHub Pages');
-    await git.push('origin', ghPagesBranch);
+    // await git.commit('Deploying to GitHub Pages');
+    // await git.push('origin', ghPagesBranch);
 
     console.log('Deployed successfully!');
   } catch (error) {
