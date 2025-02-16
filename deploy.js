@@ -1,6 +1,7 @@
-const fs = require('fs');
-const path = require('path');
-const simpleGit = require('simple-git');
+import fs from 'fs';
+import path from 'path';
+import simpleGit from 'simple-git';
+
 const git = simpleGit();
 
 // The folder containing your built app
@@ -32,8 +33,8 @@ async function deploy() {
 
     // Commit and push the changes to `gh-pages`
     await git.add('.');
-    // await git.commit('Deploying to GitHub Pages');
-    // await git.push('origin', ghPagesBranch);
+    await git.commit('Deploying to GitHub Pages');
+    await git.push('origin', ghPagesBranch);
 
     console.log('Deployed successfully!');
   } catch (error) {
