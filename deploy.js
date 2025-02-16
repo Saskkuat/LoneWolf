@@ -37,8 +37,8 @@ async function deploy() {
 
     // Commit and push the changes to `gh-pages`
     await git.add('.');
-    // await git.commit('Deploying to GitHub Pages');
-    // await git.push('origin', ghPagesBranch);
+    await git.commit('Deploying to GitHub Pages');
+    await git.push('origin', ghPagesBranch);
 
     console.log('Deployed successfully!');
   } catch (error) {
@@ -52,8 +52,8 @@ function removeFilesAndFolders(paths) {
     if (fs.existsSync(item)) {
       const stats = fs.statSync(item);
       if (stats.isDirectory()) {
-        // If it's a directory, remove it recursively
-        fs.rmdirSync(item, { recursive: true });
+        // Use fs.rmSync() instead of fs.rmdirSync() to avoid deprecation warning
+        fs.rmSync(item, { recursive: true, force: true });
       } else {
         // If it's a file, remove it
         fs.unlinkSync(item);
