@@ -102,7 +102,7 @@ def process_html_file(file_name, index, total):
         translated_text = translate_with_selenium(str(soup))
 
         # Save translated HTML
-        with open(br_file_path, "w", encoding="utf-8", errors="replace") as file:
+        with open(br_file_path, "w", encoding="windows-1252", errors="replace") as file:
             file.write(translated_text)
 
         print(f"\n[{index}/{total}] ✅ Saved translation: {br_file_path}")
