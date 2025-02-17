@@ -20,16 +20,30 @@ def convert_html_encoding(input_folder):
                 with open(file_path, 'r', encoding=encoding) as file:
                     content = file.read()
 
-                # Re-open the file with windows-1252 encoding and write the content
+                # Replace problematic characters
+                replacements = {
+                    '\u2009': ' ',  # Thin space → Normal space
+                    '−': '-',        # Minus sign → Hyphen
+                    '“': '"',        # Left double quote → Standard "
+                    '”': '"',        # Right double quote → Standard "
+                    '‘': "'",        # Left single quote → Standard '
+                    '’': "'",        # Right single quote → Standard '
+                    '…': '...',      # Ellipsis → Three dots
+                }
+
+                for char, replacement in replacements.items():
+                    content = content.replace(char, replacement)
+
+                # Write back the modified content with Windows-1252 encoding
                 with open(file_path, 'w', encoding='windows-1252') as file:
                     file.write(content)
 
                 print(f"Converted {filename} to windows-1252 encoding")
             except Exception as e:
                 print(f"Error processing {filename}: {e}")
-
+                
 # Specify the folder where the HTML files are located
-folder_path = 'C:/Callisto/LoneWolf/ShadowOnTheSand/text/br'
+folder_path = 'C:/Callisto/LoneWolf/public/TheCavernsOfKalte/text/br'
 
 # Call the function
 convert_html_encoding(folder_path)
