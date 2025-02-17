@@ -25,7 +25,7 @@ if LANGUAGE == "EN":
     ENCODING = "utf-8"
 elif LANGUAGE == "BR":
     VOICE = "pt-BR-AntonioNeural"
-    ENCODING = "windows-1252"
+    ENCODING = "utf-8"
 else:
     raise ValueError("Invalid language setting. Use 'EN' or 'BR'.")
 
