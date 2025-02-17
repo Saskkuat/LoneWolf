@@ -111,7 +111,7 @@ export default function LoneWolfPWA() {
     fetch(`${import.meta.env.BASE_URL}${currentBook.path}/text/${language}/${section}.html`)
       .then((res) => res.arrayBuffer())
       .then((buffer) => {
-        const decoder = new TextDecoder(language === "br" ? "windows-1252" : "utf-8");
+        const decoder = new TextDecoder("utf-8");
         let decodedContent = decoder.decode(buffer);
         let newIsDiceSection = false;
         
