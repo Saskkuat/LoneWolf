@@ -52,7 +52,7 @@ def convert_html_encoding(input_folder, to_encoding="windows-1252"):
                 print(f"Error processing {filename}: {e}")
 
 # ========== USAGE ==========
-folder_path = 'C:/Callisto/LoneWolf/public/FireOnTheWater/text/br' # Change this to your folder path
+folder_path = 'C:/Callisto/LoneWolf/public/FlightFromTheDark/text/br' # Change this to your folder path
 convert_to = "utf-8"  # Change to "windows-1252" or "utf-8"
 
 convert_html_encoding(folder_path, to_encoding=convert_to)
