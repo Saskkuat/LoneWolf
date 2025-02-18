@@ -21,6 +21,7 @@ export default function LoneWolfPWA() {
   const [visitedSections, setVisitedSections] = useState(() => {
     return JSON.parse(localStorage.getItem("visitedSections")) || [];
   });
+  const [currentBookIndex, setCurrentBookIndex] = useState(0);
   const [content, setContent] = useState("");
   const [audio, setAudio] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -81,7 +82,10 @@ export default function LoneWolfPWA() {
 
   useEffect(() => {
 
-    if (!currentBook) return;
+    if (!currentBook) {
+      moveCarousel(null, true);
+      return;
+    }
     
     localStorage.setItem("currentBook", JSON.stringify(currentBook));
 
@@ -272,8 +276,7 @@ export default function LoneWolfPWA() {
     stopAudio();
   }
 
-  const handleBookClick = (bookSelector) => {
-    const bookId = parseInt(bookSelector.dataset["bookId"]);
+  const handleBookClick = (bookId) => {
     setCurrentBookInfo(bookId);
   }
 
@@ -298,12 +301,7 @@ export default function LoneWolfPWA() {
         stopDefaultHandler(event);
       }
 
-      const bookSelector = event.target.closest('.content.choice.book');
-
-      if (bookSelector) {
-        handleBookClick(bookSelector);
-      }
-      else if (event.target.matches(".choice.chapter a")) {
+      if (event.target.matches(".choice.chapter a")) {
         handleChapterClick(event);
       }
       else if (event.target.matches(".choice:not(.book):not(.chapter) a")) {
@@ -312,6 +310,7 @@ export default function LoneWolfPWA() {
     });
     
     return () => {
+      contentContainer.removeEventListener("click", handleChapterClick);
       contentContainer.removeEventListener("click", handleChoiceClick);
     };
   }, [currentBook, content, currentSection]);
@@ -319,132 +318,31 @@ export default function LoneWolfPWA() {
   useEffect(() => {
     if (!validBooks || validBooks.length == 0) return;
     if (currentBook) return;
+    
+    moveCarousel(99)
 
-    var slider = document.getElementById("slider"),
-        sliderItems = document.getElementById("items"),
-        prev = document.getElementById("prev"),
-        next = document.getElementById("next");
+  }, [validBooks]);
 
-    slide(slider, sliderItems, prev, next);
+  // Adiciona a função de movimentação
+  const moveCarousel = (direction, moveToLastBook) => {
 
-    function slide(wrapper, items, prev, next) {
-      var posX1 = 0,
-        posX2 = 0,
-        posInitial,
-        posFinal,
-        threshold = 100,
-        slides = items.getElementsByClassName("slide"),
-        slidesLength = slides.length,
-        slideSize = items.getElementsByClassName("slide")[0].offsetWidth,
-        firstSlide = slides[0],
-        lastSlide = slides[slidesLength - 1],
-        cloneFirst = firstSlide.cloneNode(true),
-        cloneLast = lastSlide.cloneNode(true),
-        index = 0,
-        allowShift = true;
+    const carousel = document.getElementById("carouselCards");
+    const cards = Array.from(carousel.querySelectorAll(".card"));
+    const cardWidth = 400; // Largura do card (ajuste conforme necessário)
+    const cardMargin = 40; // Margem entre os cards (ajuste conforme necessário)
+    let index = currentBookIndex + (moveToLastBook ? 0 : direction);
 
-      // Clone first and last slide
-      items.appendChild(cloneFirst);
-      items.insertBefore(cloneLast, firstSlide);
-      wrapper.classList.add("loaded");
+    // Quando ultrapassar os limites
+    if (index >= cards.length) index = 0;
+    if (index < 0) index = cards.length - 1;
 
-      // Mouse and Touch events
-      //items.onmousedown = dragStart;
+    // Movimenta o carrossel
+    const moveAmount = -index * (cardWidth + cardMargin);
+    carousel.style.transition = "transform 0.3s ease-in-out"; // Suavização
+    carousel.style.transform = `translateX(${moveAmount}px)`;
 
-      // Touch events
-      // items.addEventListener("touchstart", dragStart);
-      // items.addEventListener("touchend", dragEnd);
-      // items.addEventListener("touchmove", dragAction);
-
-      // Click events
-      prev.addEventListener("click", function () {
-        shiftSlide(-1);
-      });
-      next.addEventListener("click", function () {
-        shiftSlide(1);
-      });
-
-      // Transition events
-      items.addEventListener("transitionend", checkIndex);
-
-      function dragStart(e) {
-        e = e || window.event;
-        e.preventDefault();
-        posInitial = items.offsetLeft;
-
-        if (e.type == "touchstart") {
-          posX1 = e.touches[0].clientX;
-        } else {
-          posX1 = e.clientX;
-          document.onmouseup = dragEnd;
-          document.onmousemove = dragAction;
-        }
-      }
-
-      function dragAction(e) {
-        e = e || window.event;
-
-        if (e.type == "touchmove") {
-          posX2 = posX1 - e.touches[0].clientX;
-          posX1 = e.touches[0].clientX;
-        } else {
-          posX2 = posX1 - e.clientX;
-          posX1 = e.clientX;
-        }
-        items.style.left = items.offsetLeft - posX2 + "px";
-      }
-
-      function dragEnd(e) {
-        posFinal = items.offsetLeft;
-        if (posFinal - posInitial < -threshold) {
-          shiftSlide(1, "drag");
-        } else if (posFinal - posInitial > threshold) {
-          shiftSlide(-1, "drag");
-        } else {
-          items.style.left = posInitial + "px";
-        }
-
-        document.onmouseup = null;
-        document.onmousemove = null;
-      }
-
-      function shiftSlide(dir, action) {
-        items.classList.add("shifting");
-
-        if (allowShift) {
-          if (!action) {
-            posInitial = items.offsetLeft;
-          }
-
-          if (dir == 1) {
-            items.style.left = posInitial - slideSize + "px";
-            index++;
-          } else if (dir == -1) {
-            items.style.left = posInitial + slideSize + "px";
-            index--;
-          }
-        }
-
-        allowShift = false;
-      }
-
-      function checkIndex() {
-        items.classList.remove("shifting");
-
-        if (index == -1) {
-          items.style.left = -(slidesLength * slideSize) + "px";
-          index = slidesLength - 1;
-        }
-
-        if (index == slidesLength) {
-          items.style.left = -(1 * slideSize) + "px";
-          index = 0;
-        }
-
-        allowShift = true;
-      }
-    }
-  },[validBooks, currentBook]);
+    setCurrentBookIndex(index);
+  }
 
   return (
     <div className={`app-container flex flex-col items-center justify-center min-h-screen px-6 ${!currentBook ? "carousell" : ""}`}>
@@ -456,33 +354,30 @@ export default function LoneWolfPWA() {
           <p style={{fontSize: "1.2em"}}>{language == "br" ? "Selecione sua próxima aventura" : "Select your next adventure"}</p>
           <br/>
           <div className="table-books">
-            <div className="text-content" style={{position: "relative"}}>
+            <div className="text-content" style={{position: "relative", fontSize: "1em"}}>
               <br/>
-              <div id="slider" className="slider">
-                <div className="wrapper">
-                  <div id="items" className="items">
+              <div className="wood-table">
+              </div>             
+              <div className="carousel-container">
+                <div className="carousel" id="carouselCards">
                   {validBooks && validBooks.map((book, index) => (
-                    <span className="slide" key={index}>
-                      <div className="content choice book" data-book-id={book.id}>
-                        <div className="container">
-                          <div className="up">
-                            <div className="cover" style={{backgroundImage: `url("${import.meta.env.BASE_URL}images/${book.path}.webp")`}}>
-                              <div className="year">
-                                <p>{book.year}</p>
-                              </div>
-                            </div>
-                            <div className="name">
-                              {book[`name-${language}`]}
-                            </div>
-                          </div>
-                        </div>
+                    <div className="card" key={index} data-book-id={book.id}>
+                      <img src={`${import.meta.env.BASE_URL}images/${book.path}.webp`} alt="Imagem do Card 1" className="card-image"></img>
+                      <div className="card-content">
+                        <h2 className="card-title">{book[`name-${language}`]}</h2>
+                        <p className="card-description">
+                          {book[`description-${language}`]}
+                        </p>
+                        <button className="card-button" data-book-id={book.id} onClick={() => {handleBookClick(book.id)}}>Se aventurar!</button>
                       </div>
-                    </span>
+                    </div>
                   ))}
-                  </div>
                 </div>
-                <a id="prev" className="control prev"></a>
-                <a id="next" className="control next"></a>
+
+                <div className="carousel-controls">
+                  <button className="prev-btn" onClick={() => {moveCarousel(-1)}}>&#10094;</button>
+                  <button className="next-btn" onClick={() => {moveCarousel(1)}}>&#10095;</button>
+                </div>
               </div>
             </div>
           </div>

@@ -5,7 +5,9 @@
         "sections": 350, 
         "name-en": "Flight from the dark", 
         "name-br": "Fuga da escuridão",
-        "year": 1984
+        "year": 1984,
+        "description-en": "Was the first book of the award-winning Lone Wolf book series created by Joe Dever",
+        "description-br": "Foi o primeiro livro da premiada série de livros Lone Wolf, criada por Joe Dever"
     },
     { 
         "id": 2, 
@@ -13,7 +15,9 @@
         "sections": 350, 
         "name-en": "Fire on the water", 
         "name-br": "Fogo na água",
-        "year": 1984
+        "year": 1984,
+        "description-en": "Lone Wolfs journey to retrieve the Sommerswerd and return to Sommerlund and defeat the incoming Darklord invasion",
+        "description-br": "A jornada do Lobo Solitário para recuperar o Sommerswerd e retornar a Sommerlund e derrotar a invasão do Darklord"
     },
     { 
         "id": 3, 
@@ -21,7 +25,9 @@
         "sections": 350, 
         "name-en": "The caverns of Kalte", 
         "name-br": "As cavernas de Kalte",
-        "year": 1984
+        "year": 1984,
+        "description-en": "Third book of the award-winning Lone Wolf book series created by Joe Dever",
+        "description-br": "Terceiro livro da premiada série de livros Lone Wolf, criada por Joe Dever"
     },
     { 
         "id": 4, 
@@ -29,7 +35,9 @@
         "sections": 350, 
         "name-en": "The chasm of doom", 
         "name-br": "O abismo da perdição",
-        "year": 1985
+        "year": 1985,
+        "description-en": "Fourth book in the award-winning Lone Wolf book series created by Joe Dever and illustrated by Gary Chalk",
+        "description-br": "Quarto livro da premiada série de livros Lone Wolf, criada por Joe Dever e ilustrada por Gary Chalk"
     },
     { 
         "id": 5, 
@@ -37,6 +45,8 @@
         "sections": 400, 
         "name-en": "Shadow on the sand", 
         "name-br": "Sombra na areia",
-        "year": 1985
+        "year": 1985,
+        "description-en": "Fifth book in the award-winning Lone Wolf book series created by Joe Dever. This is the final book in the 'Kai' portion of the series",
+        "description-br": "Quinto livro da premiada série de livros Lone Wolf criada por Joe Dever. Este é o último livro da parte 'Kai' da série"
     }
   ]
