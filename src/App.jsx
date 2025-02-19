@@ -3,7 +3,7 @@ import booksData from './books.json';
 import { useState, useEffect } from "react";
 import { Play, Pause, StopCircle, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
-export default function LoneWolfPWA() {
+export default function LoneWolfPWA() {  
   const validBooks = booksData;
   const [currentBook, setCurrentBook] = useState(() => {
     try {
@@ -170,6 +170,27 @@ export default function LoneWolfPWA() {
       });
   }
 
+  useEffect(() => {
+    parchMentHeight();
+  }, [content])
+
+  const parchMentHeight = () => {
+    const parchment = document.querySelector('.parchment');
+    const content = document.querySelector('.content');
+    
+    if (!parchment || !content) return;
+  
+    // SVG feTurbulence can modify all others elements, for this reason "parchment" is in another <div> and in absolute position.
+    // so for a better effect, absolute height is defined by his content.
+    parchment.style.height = (content.offsetHeight + 250) + 'px';
+
+    window.addEventListener('resize', parchMentHeight);
+
+    return () => {
+      window.removeEventListener("resize", parchMentHeight);
+    };
+  }
+
   const fetchAudio = async (section) => {
 
     stopAudio();
@@ -327,6 +348,7 @@ export default function LoneWolfPWA() {
   const moveCarousel = (direction, moveToLastBook) => {
 
     const carousel = document.getElementById("carouselCards");
+    if (!carousel) return;
     const cards = Array.from(carousel.querySelectorAll(".card"));
     const cardWidth = 400; // Largura do card (ajuste conforme necessário)
     const cardMargin = 40; // Margem entre os cards (ajuste conforme necessário)
@@ -345,13 +367,12 @@ export default function LoneWolfPWA() {
   }
 
   return (
-    <div className={`app-container flex flex-col items-center justify-center min-h-screen px-6 ${!currentBook ? "carousell" : ""}`}>
+    <div className={`app-container ${!currentBook ? "carousell" : ""}`}>      
+      <button className="wood-button corner-bottom-right" onClick={changeLanguage}>{language.toUpperCase()}</button>
       {!currentBook && (
         <div className="book-container">
-          <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
-          <br/>
-          <br/>
-          <p style={{fontSize: "1.2em"}}>{language == "br" ? "Selecione sua próxima aventura" : "Select your next adventure"}</p>
+          <div className="carved">{language == "br" ? "Lobo Solitário" : "Lone Wolf"}</div>
+          <div className="carved sub">{language == "br" ? "Selecione sua próxima aventura" : "Select your next adventure"}</div>
           <br/>
           <div className="table-books">
             <div className="text-content" style={{position: "relative", fontSize: "1em"}}>
@@ -359,24 +380,21 @@ export default function LoneWolfPWA() {
               <div className="wood-table">
               </div>             
               <div className="carousel-container">
-                <div className="carousel" id="carouselCards">
+                <div className="carousel">
                   {validBooks && validBooks.map((book, index) => (
-                    <div className="card" key={index} data-book-id={book.id}>
-                      <img src={`${import.meta.env.BASE_URL}images/${book.path}.webp`} alt="Imagem do Card 1" className="card-image"></img>
-                      <div className="card-content">
-                        <h2 className="card-title">{book[`name-${language}`]}</h2>
-                        <p className="card-description">
-                          {book[`description-${language}`]}
-                        </p>
-                        <button className="card-button" data-book-id={book.id} onClick={() => {handleBookClick(book.id)}}>Se aventurar!</button>
+                    <div className="carousel-item" key={index} data-book-id={book.id}>
+                      <div className="carousel-box">
+                        <span className="ribbon">{book.id}</span>
+                        <div className="carousel-title">{book[`name-${language}`]}</div>
+                        <img src={`${import.meta.env.BASE_URL}images/${book.path}.webp`} alt={`#${book.id} book cover`}></img>
+                        <button className="carousel-button" data-book-id={book.id} onClick={() => {handleBookClick(book.id)}}>Se aventurar!</button>
                       </div>
                     </div>
                   ))}
                 </div>
-
                 <div className="carousel-controls">
-                  <button className="prev-btn" onClick={() => {moveCarousel(-1)}}>&#10094;</button>
-                  <button className="next-btn" onClick={() => {moveCarousel(1)}}>&#10095;</button>
+                  <button className="carousel-prev" onClick={() => {moveCarousel(-1)}}>&#10094;</button>
+                  <button className="carousel-next" onClick={() => {moveCarousel(1)}}>&#10095;</button>
                 </div>
               </div>
             </div>
@@ -386,7 +404,6 @@ export default function LoneWolfPWA() {
       {currentBook && !hasStarted && (
         <div className="start-container">
           <p className="book-title">{currentBook[`name-${language}`]}</p>
-          <button className="start-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
           <br/>
           <button onClick={changeSelectedBook} className="ml-4 p-2 bg-red-500 vintage-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
           <button onClick={startAdventure} className="start-button vintage-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
@@ -409,10 +426,10 @@ export default function LoneWolfPWA() {
       )}
       {currentBook && hasStarted && currentSection != null && (
         <div>
-          <div className="vintage-buttons end">
-            <button onClick={() => setIsModalOpen(true)} className="ml-4 p-2 bg-red-500 vintage-button left">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
-            <button onClick={resetSection} className="ml-4 p-2 bg-red-500 vintage-button">{language === "br" ? "Reiniciar aventura" : "Restart adventure"}</button>
-            <button className="language-button absolute left-4 top-4 vintage-button" onClick={changeLanguage}>{language.toUpperCase()}</button>
+          <div className="carved">{currentBook[`name-${language}`]}</div>
+          <div className="section-controls">
+            <button onClick={() => setIsModalOpen(true)} className="wood-button left">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
+            <button onClick={resetSection} className="wood-button">{language === "br" ? "Reiniciar aventura" : "Restart adventure"}</button>
             {isModalOpen && (
               <div className="modal-overlay" onClick={() => {
                   setIsModalOpen(false);
@@ -443,27 +460,26 @@ export default function LoneWolfPWA() {
               </div>
             )}
           </div>
-          <div className="vintage-frame">
-            <div className="vintage-buttons">
+          <div className="parchment"></div>
+          <div className="content">
+            <div className="section-controls">
               {currentSection != 0 && (
-                <div className="stored-section-display my-4 text-lg font-bold">
-                  <span className="first"><span className="firstLetter">{currentSection}</span></span>
+                <div className="title">
+                  <span className="tile"><span className="firstLetter">{currentSection}</span></span>
                 </div>
               )}
-              {/* Vintage Audio Player */}
-              <div className="vintage-audio-player">
+              <div className="audio-player">
                 <div className="audio-controls">
-                  <button onClick={togglePlayPause} className="vintage-button">
-                    {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                  <button onClick={togglePlayPause} className="wood-button">
+                    {isPlaying ? <Pause /> : <Play />}
                   </button>
-                  <button onClick={stopAudio} className="vintage-button">
-                    <StopCircle className="w-5 h-5" />
+                  <button onClick={stopAudio} className="wood-button">
+                    <StopCircle />
                   </button>
-                  <button onClick={restartAudio} className="vintage-button">
-                    <RotateCcw className="w-5 h-5" />
+                  <button onClick={restartAudio} className="wood-button">
+                    <RotateCcw />
                   </button>
                 </div>
-                {/* Audio Progress Bar */}
                 <div 
                   className="audio-progress-bar"
                   onClick={handleProgressBarClick}
@@ -473,23 +489,20 @@ export default function LoneWolfPWA() {
                     style={{ width: `${audioProgress}%` }}
                   />
                 </div>
-                {/* Time display */}
                 <div className="audio-time">
                   <span>{formatTime(Math.floor(audioProgress / 100 * audioDuration))} / {formatTime(Math.floor(audioDuration))}</span>
                 </div>
               </div>
             </div>
-            <div className="content-container mx-auto my-8 p-8 border border-[#d4c2a0] bg-[#fdf8e1] text-[#3e2723] font-serif leading-relaxed text-justify shadow-lg rounded-lg">            
-              {currentSection == 0 && (
-                <div className="intro-content">
-                  <p className="first intro">
-                      <span className="firstLetter">{language == "br" ? "O" : "T"}</span>
-                      <span className="intro">{language == "br" ? " caminho até aqui..." : "he story so far…"}</span>
-                  </p>
-                </div>
-              )}
-              <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
-            </div>
+            {currentSection == 0 && (
+              <div className="intro-content">
+                <p className="first intro">
+                    <span className="firstLetter">{language == "br" ? "O" : "T"}</span>
+                    <span className="intro">{language == "br" ? " caminho até aqui..." : "he story so far…"}</span>
+                </p>
+              </div>
+            )}
+            <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
             {isDiceSection && (
               <div className="dice-container">
                 <div className={`dice ${rolling ? "rolling" : ""}`} onClick={rollDice}>
@@ -521,6 +534,12 @@ export default function LoneWolfPWA() {
           </div>
         </div>
       )}
+      <svg>
+        <filter id="wavy">
+          <feTurbulence x="0" y="0" baseFrequency="0.02" numOctaves="5" seed="1"></feTurbulence>
+          <feDisplacementMap in="SourceGraphic" scale="20"></feDisplacementMap>
+        </filter>
+      </svg>
     </div>
   );
 }
