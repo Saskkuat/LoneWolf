@@ -83,7 +83,7 @@ export default function LoneWolfPWA() {
   useEffect(() => {
 
     if (!currentBook) {
-      moveCarousel(null, true);
+      //moveCarousel(null, true);
       return;
     }
     
@@ -171,23 +171,23 @@ export default function LoneWolfPWA() {
   }
 
   useEffect(() => {
-    parchMentHeight();
+    parchmentHeight();
   }, [content])
 
-  const parchMentHeight = () => {
+  const parchmentHeight = () => {
     const parchment = document.querySelector('.parchment');
     const content = document.querySelector('.content');
-    
+
     if (!parchment || !content) return;
   
     // SVG feTurbulence can modify all others elements, for this reason "parchment" is in another <div> and in absolute position.
     // so for a better effect, absolute height is defined by his content.
     parchment.style.height = (content.offsetHeight + 250) + 'px';
 
-    window.addEventListener('resize', parchMentHeight);
+    window.addEventListener('resize', parchmentHeight);
 
     return () => {
-      window.removeEventListener("resize", parchMentHeight);
+      window.removeEventListener("resize", parchmentHeight);
     };
   }
 
@@ -297,7 +297,10 @@ export default function LoneWolfPWA() {
     stopAudio();
   }
 
-  const handleBookClick = (bookId) => {
+  const handleBookClick = (event) => {
+    const bookId = parseInt(event.target.dataset["bookId"]);
+    if (!bookId) return;
+
     setCurrentBookInfo(bookId);
   }
 
@@ -336,68 +339,150 @@ export default function LoneWolfPWA() {
     };
   }, [currentBook, content, currentSection]);
 
+  // Carousel with dragn and wheel
   useEffect(() => {
     if (!validBooks || validBooks.length == 0) return;
     if (currentBook) return;
-    
-    moveCarousel(99)
 
-  }, [validBooks]);
+    /*--------------------
+    Vars
+    --------------------*/
+    let progress = 0
+    let startX = 0
+    let active = 0
+    let isDown = false
 
-  // Adiciona a função de movimentação
-  const moveCarousel = (direction, moveToLastBook) => {
+    /*--------------------
+    Contants
+    --------------------*/
+    const speedWheel = 0.02
+    const speedDrag = -0.1
 
-    const carousel = document.getElementById("carouselCards");
-    if (!carousel) return;
-    const cards = Array.from(carousel.querySelectorAll(".card"));
-    const cardWidth = 400; // Largura do card (ajuste conforme necessário)
-    const cardMargin = 40; // Margem entre os cards (ajuste conforme necessário)
-    let index = currentBookIndex + (moveToLastBook ? 0 : direction);
+    /*--------------------
+    Get Z
+    --------------------*/
+    const getZindex = (array, index) => (array.map((_, i) => (index === i) ? array.length : array.length - Math.abs(index - i)))
 
-    // Quando ultrapassar os limites
-    if (index >= cards.length) index = 0;
-    if (index < 0) index = cards.length - 1;
+    /*--------------------
+    Items
+    --------------------*/
+    const $items = document.querySelectorAll('.carousel-item')
 
-    // Movimenta o carrossel
-    const moveAmount = -index * (cardWidth + cardMargin);
-    carousel.style.transition = "transform 0.3s ease-in-out"; // Suavização
-    carousel.style.transform = `translateX(${moveAmount}px)`;
+    const displayItems = (item, index, active) => {
+      const zIndex = getZindex([...$items], active)[index]
+      item.style.setProperty('--zIndex', zIndex)
+      item.style.setProperty('--active', (index-active)/$items.length)
 
-    setCurrentBookIndex(index);
-  }
+      if (item.style.getPropertyValue("--active") == "0") {
+        setCurrentBookIndex(parseInt(item.dataset["bookId"]));
+      }
+    }
+
+    /*--------------------
+    Animate
+    --------------------*/
+    const animate = () => {
+      progress = Math.max(0, Math.min(progress, 100))
+      active = Math.floor(progress/100*($items.length-1))
+      
+      $items.forEach((item, index) => displayItems(item, index, active))
+    }
+    animate()
+
+    /*--------------------
+    Click on Items
+    --------------------*/
+    $items.forEach((item, i) => {
+      item.addEventListener('click', () => {
+        progress = (i/$items.length) * 100 + 20
+        animate()
+      })
+    })
+
+    /*--------------------
+    Handlers
+    --------------------*/
+    const handleWheel = e => {
+      const wheelProgress = e.deltaY * speedWheel
+      progress = progress + wheelProgress
+      animate()
+    }
+
+    const handleMouseMove = (e) => {
+      if (!isDown) return
+      const x = e.clientX || (e.touches && e.touches[0].clientX) || 0
+      const mouseProgress = (x - startX) * speedDrag
+      progress = progress + mouseProgress
+      startX = x
+      animate()
+    }
+
+    const handleMouseDown = e => {
+      isDown = true
+      startX = e.clientX || (e.touches && e.touches[0].clientX) || 0
+    }
+
+    const handleMouseUp = () => {
+      isDown = false
+    }
+
+    /*--------------------
+    Listeners
+    --------------------*/
+    document.addEventListener('mousewheel', handleWheel)
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('touchstart', handleMouseDown)
+    document.addEventListener('touchmove', handleMouseMove)
+    document.addEventListener('touchend', handleMouseUp)
+
+  }, [validBooks, currentBook]);
+
+  useEffect(() => {
+    if (!currentBookIndex) return;
+
+    const btnTitle = document.querySelector(".wood-button.book-title");
+    const book = validBooks.find(e => e.id === currentBookIndex);
+    btnTitle.innerHTML = book[`name-${language}`];
+    btnTitle.dataset["bookId"] = book.id;
+
+  }, [currentBookIndex, language])
 
   return (
-    <div className={`app-container ${!currentBook ? "carousell" : ""}`}>      
+    <div className="app-container">
       <button className="wood-button corner-bottom-right" onClick={changeLanguage}>{language.toUpperCase()}</button>
       {!currentBook && (
         <div className="book-container">
           <div className="carved">{language == "br" ? "Lobo Solitário" : "Lone Wolf"}</div>
           <div className="carved sub">{language == "br" ? "Selecione sua próxima aventura" : "Select your next adventure"}</div>
-          <br/>
-          <div className="table-books">
-            <div className="text-content" style={{position: "relative", fontSize: "1em"}}>
-              <br/>
-              <div className="wood-table">
-              </div>             
-              <div className="carousel-container">
-                <div className="carousel">
-                  {validBooks && validBooks.map((book, index) => (
-                    <div className="carousel-item" key={index} data-book-id={book.id}>
-                      <div className="carousel-box">
-                        <span className="ribbon">{book.id}</span>
-                        <div className="carousel-title">{book[`name-${language}`]}</div>
-                        <img src={`${import.meta.env.BASE_URL}images/${book.path}.webp`} alt={`#${book.id} book cover`}></img>
-                        <button className="carousel-button" data-book-id={book.id} onClick={() => {handleBookClick(book.id)}}>Se aventurar!</button>
+          <button className="wood-button book-title" data-book-id="" onClick={(event) => {handleBookClick(event)}}>
+            {language == "br" ? "Escolha um livro" : "Choose a boook"}
+          </button>
+          <div className="carousel">
+            {validBooks && validBooks.map((book, index) => (
+              <div className="carousel-item" key={index} data-book-id={book.id}>
+                <div className="carousel-box">
+                  <div className="book-item">
+                    <div className="main-book-wrap">
+                      <div className="book-cover">
+                        <div className="book-inside"></div>
+                        <div className="book-image">       
+                          <span className="ribbon">{book.id}</span>                   
+                          <img src={`${import.meta.env.BASE_URL}images/${book.path}.webp`} alt={`#${book.id} book cover`}></img>
+                          <div className="effect"></div>
+                          <div className="light"></div>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-                <div className="carousel-controls">
-                  <button className="carousel-prev" onClick={() => {moveCarousel(-1)}}>&#10094;</button>
-                  <button className="carousel-next" onClick={() => {moveCarousel(1)}}>&#10095;</button>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
+          </div>
+          <div className="carousel-controls">
+            {/* <button className="carousel-prev" onClick={() => {moveCarousel(-1)}}>&#10094;</button>
+            <button className="carousel-next" onClick={() => {moveCarousel(1)}}>&#10095;</button> */}
           </div>
         </div>
       )}
