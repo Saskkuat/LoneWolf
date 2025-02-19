@@ -490,14 +490,14 @@ export default function LoneWolfPWA() {
         <div>
           <div className="carved">{currentBook[`name-${language}`]}</div>
           <div className="chapters">
-            <div className="parchment" style={{"margin-top": "0"}}></div>
+            <div className="parchment" style={{"marginTop": "0"}}></div>
             <div className="content">
               <div className="section-controls">
                 <button onClick={changeSelectedBook} className="wood-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
                 <button onClick={startAdventure} className="wood-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
               </div>
               <div className="text-content">
-                <div className="title" style={{"font-size": "1.2em", "line-height": "2em", "margin-top": "1.2em"}}>
+                <div className="title" style={{"fontSize": "1.2em", "lineHeight": "2em", "marginTop": "1.2em"}}>
                   {language == "br" ? "Ou selecione um capítulo" : "Or select a chapter"}
                 </div>                
                 <ul>
@@ -510,7 +510,7 @@ export default function LoneWolfPWA() {
                   ))}
                 </ul>
               </div>
-              <div class="wax-seal">{language == "br" ? "LS" : "LW"}</div>
+              <div className="wax-seal">{language == "br" ? "LS" : "LW"}</div>
             </div>
           </div>
         </div>
@@ -526,27 +526,32 @@ export default function LoneWolfPWA() {
                   setIsModalOpen(false);
                   setExpandedSection(null);
                 }}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                  <h2>{language === "br" ? "Sua jornada" : "Your journey"}</h2>
-                  <ul>
-                    {visitedSections.slice().reverse().map((section) => (
-                      <li key={section}>
-                        <button
-                          onClick={() => toggleSection(section)}
-                          className="section-toggle"
-                        >
-                          {language === "br" ? "Capítulo" : "Chapter"} {section} {expandedSection === section ? <ChevronUp /> : <ChevronDown />}
-                        </button>
-                        {expandedSection === section && (
-                          <div
-                            className="section-content"
-                            dangerouslySetInnerHTML={{ __html: sectionContents[section] || "Loading..." }}
-                          />
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  <button onClick={() => setIsModalOpen(false)} className="close-button">{language === "br" ? "Fechar" : "Close"}</button>
+                <div className="modal-wrapper">
+                  <img src={`${import.meta.env.BASE_URL}images/background-modal.png`}></img>
+                  <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="title" style={{ "margin": "2rem"}}>{language === "br" ? "Sua jornada" : "Your journey"}</div>
+                    <div className="modal-overflow">
+                      <ul>
+                        {visitedSections.slice().reverse().map((section) => (
+                          <li key={section}>
+                            <button
+                              onClick={() => toggleSection(section)}
+                              className="section-toggle"
+                            >
+                              {language === "br" ? "Capítulo" : "Chapter"} {section} {expandedSection === section ? <ChevronUp /> : <ChevronDown />}
+                            </button>
+                            {expandedSection === section && (
+                              <div
+                                className="section-content"
+                                dangerouslySetInnerHTML={{ __html: sectionContents[section] || "Loading..." }}
+                              />
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <button onClick={() => setIsModalOpen(false)} className="wood-button">{language === "br" ? "Fechar" : "Close"}</button>
+                  </div>
                 </div>
               </div>
             )}
