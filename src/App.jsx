@@ -172,7 +172,7 @@ export default function LoneWolfPWA() {
 
   useEffect(() => {
     parchmentHeight();
-  }, [content])
+  }, [currentBook, currentSection, content])
 
   const parchmentHeight = () => {
     const parchment = document.querySelector('.parchment');
@@ -487,24 +487,30 @@ export default function LoneWolfPWA() {
         </div>
       )}
       {currentBook && !hasStarted && (
-        <div className="start-container">
-          <p className="book-title">{currentBook[`name-${language}`]}</p>
-          <br/>
-          <button onClick={changeSelectedBook} className="ml-4 p-2 bg-red-500 vintage-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
-          <button onClick={startAdventure} className="start-button vintage-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
-          <div className="table-chapters">
-            <div className="text-content">
-              <br/>
-              {language == "br" ? "Ou selecione um capítulo" : "Or select a chapter"}
-              <ul>
-                {[...Array((currentBook.sections || 0) + 1).keys()]
-                  .filter((section) => section !== 0) // Exclude section 0
-                  .map((section) => (
-                    <li>
-                      <p key={section} className="choice chapter"><a href={"chapter" + section + ".html"}>{section}</a></p>
-                    </li>
-                ))}
-              </ul>
+        <div>
+          <div className="carved">{currentBook[`name-${language}`]}</div>
+          <div className="chapters">
+            <div className="parchment" style={{"margin-top": "0"}}></div>
+            <div className="content">
+              <div className="section-controls">
+                <button onClick={changeSelectedBook} className="wood-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
+                <button onClick={startAdventure} className="wood-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
+              </div>
+              <div className="text-content">
+                <div className="title" style={{"font-size": "1.2em", "line-height": "2em", "margin-top": "1.2em"}}>
+                  {language == "br" ? "Ou selecione um capítulo" : "Or select a chapter"}
+                </div>                
+                <ul>
+                  {[...Array((currentBook.sections || 0) + 1).keys()]
+                    .filter((section) => section !== 0) // Exclude section 0
+                    .map((section) => (
+                      <li>
+                        <p key={section} className="choice chapter"><a href={"chapter" + section + ".html"}>{section}</a></p>
+                      </li>
+                  ))}
+                </ul>
+              </div>
+              <div class="wax-seal">{language == "br" ? "LS" : "LW"}</div>
             </div>
           </div>
         </div>
@@ -513,7 +519,7 @@ export default function LoneWolfPWA() {
         <div>
           <div className="carved">{currentBook[`name-${language}`]}</div>
           <div className="section-controls">
-            <button onClick={() => setIsModalOpen(true)} className="wood-button left">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
+            <button onClick={() => setIsModalOpen(true)} className="wood-button">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
             <button onClick={resetSection} className="wood-button">{language === "br" ? "Reiniciar aventura" : "Restart adventure"}</button>
             {isModalOpen && (
               <div className="modal-overlay" onClick={() => {
