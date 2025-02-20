@@ -2,23 +2,23 @@ import os
 import re
 import requests
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urljoin, urlparse
 
 # Configurable start section
-START_SECTION = 0  # Modify for other books
+START_SECTION = 0
 
-# Configurable total sections
-TOTAL_SECTIONS = 400  # Modify for other books
+# Configurable total sections (set to None for dynamic detection)
+TOTAL_SECTIONS = None
 
 # Configurable book id and name
 BOOK_ID = "05sots"
 BOOK_NAME = "ShadowOnTheSand"
-# 01fftd - FlightFromTheDark
-# 02fotw - FireOnTheWater
-# 03tcok - TheCavernsOfKalte
-# 04tcod - TheChasmOfDoom
-# 05sots - ShadowOnTheSand -- 400 SECTIONS
+# 01fftd - FlightFromTheDark    -- 350 SECTIONS
+# 02fotw - FireOnTheWater       -- 350 SECTIONS
+# 03tcok - TheCavernsOfKalte    -- 350 SECTIONS
+# 04tcod - TheChasmOfDoom       -- 350 SECTIONS
+# 05sots - ShadowOnTheSand      -- 400 SECTIONS
 
 # Base URL for scraping
 BASE_URL = rf"https://www.projectaon.org/en/xhtml/lw/{BOOK_ID}/"
@@ -55,6 +55,41 @@ def download_image(img_url):
         print(f"\n🖼️ Saved Image: {img_path}")
     except requests.RequestException as e:
         print(f"\n❌ Error downloading image {img_url}: {e}")
+
+def download_map():
+    """Download the book's map image."""
+    map_url = urljoin(BASE_URL, "map.png")
+    download_image(map_url)
+
+def section_exists(section_number):
+    """Check if a section exists by making a request."""
+    url = f"{BASE_URL}{'tssf' if section_number == 0 else f'sect{section_number}'}.htm"
+    try:
+        response = requests.head(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+def find_total_sections():
+    """Find the total number of sections dynamically using parallel search."""
+    section_number = START_SECTION
+    step = 1
+    
+    while section_exists(section_number):
+        section_number += step
+        step *= 2
+    
+    return binary_search(section_number // 2, section_number)
+
+def binary_search(low, high):
+    """Perform binary search to find the exact last valid section."""
+    while low < high:
+        mid = (low + high) // 2
+        if section_exists(mid):
+            low = mid + 1
+        else:
+            high = mid
+    return low - 1
 
 def scrape_and_save(section_number):
     """Scrape text and images from the section and save them as HTML."""
@@ -118,6 +153,14 @@ def scrape_and_save(section_number):
 if __name__ == "__main__":
     print("\n🚀 Starting web scraping...\n")
     
+    print("🔍 Downloading map...")
+    download_map()
+    
+    if TOTAL_SECTIONS is None:
+        print("🔍 Detecting total sections dynamically...")
+        TOTAL_SECTIONS = find_total_sections()
+        print(f"📌 Dynamic detection found {TOTAL_SECTIONS} sections.")
+        
     with ThreadPoolExecutor(max_workers=10) as executor:
         executor.map(scrape_and_save, range(START_SECTION, TOTAL_SECTIONS + 1))
     

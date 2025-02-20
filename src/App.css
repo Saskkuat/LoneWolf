@@ -55,14 +55,6 @@ a {
     text-decoration: underline;
   }
 
-figure {  
-  max-width: 386px;
-  margin-left: auto;
-  margin-right: auto;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
 .corner-bottom-right {
   position: fixed !important;
   bottom: 20px;
@@ -565,6 +557,111 @@ figure {
   margin: .6em auto;
   color: #000;
 }
+  
+.choice:not(.content), .puzzle, .deadend, .combat {
+  text-align: left !important;
+  margin-left: 1rem !important;
+}
+  
+.combat {
+  color: rgb(224, 20, 20);
+}
+  
+.smallcaps {
+  margin: 0 10px;
+}
+
+.deadend {
+  color: rgb(224, 20, 20);
+  font-size: larger;
+  font-weight: bold;
+}
+  
+figure {  
+  max-width: 386px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+figure .img-responsive {  
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+cite {
+  font-style: italic;
+  font-weight: 600;
+}
+  
+section#footnotes {
+  margin-top: 2rem;
+  border-top: solid thin #ccc;
+  padding-top: 0.5rem;
+  font-size: smaller;
+  font-style: italic;
+}
+
+.map-container img {  
+  object-fit: scale-down;
+  width: 50%;
+  height: auto;
+}
+
+.dice-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px;
+}
+
+.dice {
+  width: 60px;
+  height: 60px;
+  font-size: 40px;
+  text-align: center;
+  line-height: 60px;
+  background: #f4f1e1;
+  border: 2px solid #e0c9a6;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.2s ease-in-out;
+  text-shadow: none;
+}
+
+.dice.rolling {
+  animation: rollAnimation 1.5s ease-out;
+}
+
+@keyframes rollAnimation {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(90deg); }
+  40% { transform: rotate(180deg); }
+  60% { transform: rotate(270deg); }
+  80% { transform: rotate(360deg); }
+  100% { transform: rotate(720deg); }
+}
+
+.dice:hover {
+  background: #e1d6b7;
+}
+
+.combat-ratio-tables {
+  margin-top: 1em;
+  display: flex;
+  gap: 1em;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  align-items: center;
+}
+
+
+
 
 
 .carousel-controls {

@@ -31,6 +31,7 @@ export default function LoneWolfPWA() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
   const [sectionContents, setSectionContents] = useState({});
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const [isCombatSection, setIsCombatSection] = useState(false);
   const [expandedCombatRatio, setExpandedCombatRatio] = useState(false);
   const [isDeadEnd, setIsDeadEnd] = useState(false);
@@ -171,8 +172,10 @@ export default function LoneWolfPWA() {
   }
 
   useEffect(() => {
-    parchmentHeight();
-  }, [currentBook, currentSection, content])
+    setTimeout(function() { 
+      parchmentHeight();
+    }, 25);
+  }, [currentBook, currentSection, content, expandedCombatRatio])
 
   const parchmentHeight = () => {
     const parchment = document.querySelector('.parchment');
@@ -182,7 +185,7 @@ export default function LoneWolfPWA() {
   
     // SVG feTurbulence can modify all others elements, for this reason "parchment" is in another <div> and in absolute position.
     // so for a better effect, absolute height is defined by his content.
-    parchment.style.height = (content.offsetHeight + 250) + 'px';
+    parchment.style.height = (content.offsetHeight + 150) + 'px';
 
     window.addEventListener('resize', parchmentHeight);
 
@@ -262,6 +265,10 @@ export default function LoneWolfPWA() {
     } else {
       return `${m}:${String(s).padStart(2, "0")}`;
     }
+  };
+
+  const toggleMap = () => {
+    setIsMapOpen(!isMapOpen);
   };
 
   const rollDice = () => {
@@ -443,6 +450,8 @@ export default function LoneWolfPWA() {
     if (!currentBookIndex) return;
 
     const btnTitle = document.querySelector(".wood-button.book-title");
+    if (!btnTitle) return;
+
     const book = validBooks.find(e => e.id === currentBookIndex);
     btnTitle.innerHTML = book[`name-${language}`];
     btnTitle.dataset["bookId"] = book.id;
@@ -564,6 +573,18 @@ export default function LoneWolfPWA() {
                   <span className="tile"><span className="firstLetter">{currentSection}</span></span>
                 </div>
               )}
+              <div className="map-container">
+                <img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" onClick={toggleMap} ></img>
+              </div>
+              {isMapOpen && (
+              <div className="modal-overlay" onClick={() => {
+                  setIsMapOpen(false);
+                }}>
+                <div className="modal-wrapper">
+                  <img src={`${import.meta.env.BASE_URL}${currentBook.path}/images/map.png`} style={{"borderRadius": "20px"}}></img>
+                </div>
+              </div>
+            )}
               <div className="audio-player">
                 <div className="audio-controls">
                   <button onClick={togglePlayPause} className="wood-button">
@@ -601,7 +622,7 @@ export default function LoneWolfPWA() {
             <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
             {isDiceSection && (
               <div className="dice-container">
-                <div className={`dice ${rolling ? "rolling" : ""}`} onClick={rollDice}>
+                <div className={`dice ${rolling ? "rolling" : ""} wood-button`} onClick={rollDice}>
                   {rolling ? "🎲" : result ?? "🎲"}
                 </div>
               </div>
@@ -610,7 +631,7 @@ export default function LoneWolfPWA() {
               <div>
                 <button
                   onClick={() => toggleCombatRatio()}
-                  className="vintage-button"
+                  className="wood-button"
                 >
                   {language === "br" ? "Tabela de combate" : "Combat table"}
                 </button>
