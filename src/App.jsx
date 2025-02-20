@@ -21,7 +21,7 @@ export default function LoneWolfPWA() {
   const [visitedSections, setVisitedSections] = useState(() => {
     return JSON.parse(localStorage.getItem("visitedSections")) || [];
   });
-  const [currentBookIndex, setCurrentBookIndex] = useState(0);
+  const [currentBookIndex, setCurrentBookIndex] = useState(null);
   const [content, setContent] = useState("");
   const [audio, setAudio] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -38,6 +38,7 @@ export default function LoneWolfPWA() {
   const [rolling, setRolling] = useState(false);
   const [result, setResult] = useState(null);
   const [isDiceSection, setIsDiceSection] = useState(false);
+  const [newBookId, setNewBookId] = useState(null);
 
   const setCurrentBookInfo = (bookId) => {
     const book = validBooks.find(e => e.id === bookId);
@@ -50,19 +51,25 @@ export default function LoneWolfPWA() {
     setCurrentBook(book);
   }
 
-  const clearSections = () => {    
+  const clearVisitedSections = () => {    
     setVisitedSections([]);
     localStorage.setItem("visitedSections", JSON.stringify([]));
   }
 
-  const changeSelectedBook = (event) => {
-    clearSections();
-    setCurrentBook(null);
-    localStorage.removeItem("currentBook"); // <-- Ensure localStorage is cleared
+  const changeSelectedBook = (event, newBook) => {
+    clearVisitedSections();
+    resetSection();
+    if (typeof newBook === "string") {      
+      setCurrentBookInfo(newBook);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      setCurrentBook(null);
+      localStorage.removeItem("currentBook"); // <-- Ensure localStorage is cleared
+    }
   }
 
   const startAdventure = (event, section) => {
-    clearSections();
+    clearVisitedSections();
     setHasStarted(true);
     setCurrentSection(section || 0);
   };
@@ -75,6 +82,7 @@ export default function LoneWolfPWA() {
   };
 
   const resetSection = () => {    
+    clearVisitedSections();
     localStorage.removeItem("currentSection");
     stopAudio();
     setCurrentSection(null);
@@ -82,16 +90,34 @@ export default function LoneWolfPWA() {
   };
 
   useEffect(() => {
+    setTimeout(function() { 
+      parchmentHeight();
+    }, 25);
+  }, [currentBook, currentSection, content, expandedCombatRatio])
 
-    if (!currentBook) {
-      //moveCarousel(null, true);
-      return;
-    }
-    
+  const parchmentHeight = () => {
+    const parchment = document.querySelector('.parchment');
+    const content = document.querySelector('.content');
+
+    if (!parchment || !content) return;
+  
+    // SVG feTurbulence can modify all others elements, for this reason "parchment" is in another <div> and in absolute position.
+    // so for a better effect, absolute height is defined by his content.
+    parchment.style.height = (content.offsetHeight + 150) + 'px';
+
+    window.addEventListener('resize', parchmentHeight);
+
+    return () => {
+      window.removeEventListener("resize", parchmentHeight);
+    };
+  }
+
+  useEffect(() => {
+
+    if (!currentBook) return;
     localStorage.setItem("currentBook", JSON.stringify(currentBook));
 
-    if (currentSection === null) return;
-    
+    if (currentSection === null) return;    
     localStorage.setItem("currentSection", currentSection);
 
     if (!visitedSections.includes(currentSection)) {
@@ -113,11 +139,11 @@ export default function LoneWolfPWA() {
     setResult(null);    
     setExpandedCombatRatio(false);
 
-    fetch(`${import.meta.env.BASE_URL}${currentBook.path}/text/${language}/${section}.html`)
+    fetch(`${import.meta.env.BASE_URL}${currentBook.id}/text/${language}/${section}.html`)
       .then((res) => res.arrayBuffer())
       .then((buffer) => {
         const decoder = new TextDecoder("utf-8");
-        let decodedContent = decoder.decode(buffer);
+        const decodedContent = decoder.decode(buffer);
         let newIsDiceSection = false;
         
         // Modify the first paragraph
@@ -125,8 +151,18 @@ export default function LoneWolfPWA() {
         const doc = parser.parseFromString(decodedContent, "text/html");
         // Replace external <a> elements
         doc.querySelectorAll(`a${removeChoices ? '' : ':not(.choice a)'}`).forEach((a) => {
-          if (a.getAttribute("href").indexOf("random") !== -1) {
+          if (a.getAttribute("href").indexOf("random.htm") !== -1) {
             newIsDiceSection = true;
+            a.setAttribute("data-random", "true");
+            a.innerHTML = "🎲";
+          }
+          if (a.getAttribute("href").indexOf("map.htm") !== -1) {
+            a.setAttribute("data-map", "true");
+            return;
+          }
+          if (a.getAttribute("href").indexOf("title.htm") !== -1) {
+            a.setAttribute("data-title", "true");
+            return;
           }
           const span = document.createElement("span");
           span.className = "external";
@@ -135,7 +171,7 @@ export default function LoneWolfPWA() {
         });
         doc.querySelectorAll("figure img").forEach((i) => {
           const src = i.getAttribute("src").replace("png", "gif");
-          i.setAttribute("src", `${import.meta.env.BASE_URL}${currentBook.path}/images/${src}`);
+          i.setAttribute("src", `${import.meta.env.BASE_URL}${currentBook.id}/images/${src}`);
         });
         // Condition to set content for modal or main page
         if (setModalContent) {
@@ -171,34 +207,11 @@ export default function LoneWolfPWA() {
       });
   }
 
-  useEffect(() => {
-    setTimeout(function() { 
-      parchmentHeight();
-    }, 25);
-  }, [currentBook, currentSection, content, expandedCombatRatio])
-
-  const parchmentHeight = () => {
-    const parchment = document.querySelector('.parchment');
-    const content = document.querySelector('.content');
-
-    if (!parchment || !content) return;
-  
-    // SVG feTurbulence can modify all others elements, for this reason "parchment" is in another <div> and in absolute position.
-    // so for a better effect, absolute height is defined by his content.
-    parchment.style.height = (content.offsetHeight + 150) + 'px';
-
-    window.addEventListener('resize', parchmentHeight);
-
-    return () => {
-      window.removeEventListener("resize", parchmentHeight);
-    };
-  }
-
   const fetchAudio = async (section) => {
 
     stopAudio();
 
-    const newAudio = new Audio(`${import.meta.env.BASE_URL}${currentBook.path}/audio/${language}/${section}.mp3`);
+    const newAudio = new Audio(`${import.meta.env.BASE_URL}${currentBook.id}/audio/${language}/${section}.mp3`);
     setAudio(newAudio);
     setIsPlaying(false);
 
@@ -248,11 +261,23 @@ export default function LoneWolfPWA() {
       setIsPlaying(true);
     }
   };
-
+  
   const handleProgressBarClick = (event) => {
-    if (!audio) return;
-    const clickPosition = (event.clientX - event.target.offsetLeft) / event.target.offsetWidth;
-    audio.currentTime = clickPosition * audio.duration;
+    if (!audio || isNaN(audio.duration) || audio.duration === 0) return;
+  
+    // Ensure we are getting the correct target
+    let progressBar = event.currentTarget; // safer than event.target
+  
+    if (!progressBar || progressBar.clientWidth === 0) return; // Prevent division by zero
+  
+    let clickPosition = event.clientX - progressBar.getBoundingClientRect().left;
+    let relativePosition = clickPosition / progressBar.clientWidth;
+  
+    if (isNaN(relativePosition) || !isFinite(relativePosition)) return; // Ensure it's valid
+  
+    audio.currentTime = relativePosition * audio.duration;
+    audio.play();
+    setIsPlaying(true);
   };
 
   const formatTime = (seconds) => {
@@ -305,19 +330,26 @@ export default function LoneWolfPWA() {
   }
 
   const handleBookClick = (event) => {
-    const bookId = parseInt(event.target.dataset["bookId"]);
-    if (!bookId) return;
-
+    const bookId = event.target.dataset["bookId"];
     setCurrentBookInfo(bookId);
   }
 
-  const handleChapterClick = (event) => {
-    const newSection = parseInt(event.target.getAttribute("href").replace("chapter", "").replace(".html", ""));
-    startAdventure(event, newSection);
+  const handleChapterClick = (target) => {
+    const newSection = parseInt(target.getAttribute("href").replace("chapter", "").replace(".html", ""));
+    startAdventure(null, newSection);
   }
 
-  const handleChoiceClick = (event) => {
-    const newSection = parseInt(event.target.getAttribute("href").replace("sect", "").replace(".htm", ""));
+  const handleMapClick = () => {
+    setIsMapOpen(true);
+  }
+
+  const handleNewBookClick = (target) => {
+    const bookId = target.getAttribute("href").match(/\/([^\/]+)\/title\.htm$/);
+    changeSelectedBook(null, bookId[1]);
+  }
+
+  const handleChoiceClick = (target) => {
+    const newSection = parseInt(target.getAttribute("href").replace("sect", "").replace(".htm", ""));
     setCurrentSection(newSection);
   };
 
@@ -328,15 +360,26 @@ export default function LoneWolfPWA() {
     
     contentContainer.addEventListener("click", (event) => {
 
-      if (event.target.matches(".choice a")) {
-        stopDefaultHandler(event);
+      let target = event.target;
+      if (event.target.parentElement.matches("a")) {
+        target = event.target.parentElement;
       }
 
-      if (event.target.matches(".choice.chapter a")) {
-        handleChapterClick(event);
+      if (!target) return;
+
+      stopDefaultHandler(event);
+
+      if (target.matches(".choice.chapter a")) {
+        handleChapterClick(target);
       }
-      else if (event.target.matches(".choice:not(.book):not(.chapter) a")) {
-        handleChoiceClick(event);
+      else if (target.dataset["map"]) {
+        handleMapClick();
+      }
+      else if (target.dataset["title"]) {
+        handleNewBookClick(target);
+      }
+      else if (target.matches(".choice:not(.chapter) a")) {
+        handleChoiceClick(target);
       }
     });
     
@@ -381,7 +424,7 @@ export default function LoneWolfPWA() {
       item.style.setProperty('--active', (index-active)/$items.length)
 
       if (item.style.getPropertyValue("--active") == "0") {
-        setCurrentBookIndex(parseInt(item.dataset["bookId"]));
+        setCurrentBookIndex(item.dataset["bookId"]);
       }
     }
 
@@ -456,7 +499,7 @@ export default function LoneWolfPWA() {
     btnTitle.innerHTML = book[`name-${language}`];
     btnTitle.dataset["bookId"] = book.id;
 
-  }, [currentBookIndex, language])
+  }, [currentBookIndex, language, currentBook])
 
   return (
     <div className="app-container">
@@ -477,8 +520,8 @@ export default function LoneWolfPWA() {
                       <div className="book-cover">
                         <div className="book-inside"></div>
                         <div className="book-image">       
-                          <span className="ribbon">{book.id}</span>                   
-                          <img src={`${import.meta.env.BASE_URL}images/${book.path}.webp`} alt={`#${book.id} book cover`}></img>
+                          <span className="ribbon">{book.order}</span>                   
+                          <img src={`${import.meta.env.BASE_URL}${book.id}/images/cover.webp`} alt={`#${book.order} book cover`}></img>
                           <div className="effect"></div>
                           <div className="light"></div>
                         </div>
@@ -519,7 +562,7 @@ export default function LoneWolfPWA() {
                   ))}
                 </ul>
               </div>
-              <div className="wax-seal">{language == "br" ? "LS" : "LW"}</div>
+              <div className="wax-seal parchment-end">{language == "br" ? "LS" : "LW"}</div>
             </div>
           </div>
         </div>
@@ -570,7 +613,7 @@ export default function LoneWolfPWA() {
             <div className="section-controls">
               {currentSection != 0 && (
                 <div className="title">
-                  <span className="tile"><span className="firstLetter">{currentSection}</span></span>
+                  <div className="wax-seal">{currentSection}</div>
                 </div>
               )}
               <div className="map-container">
@@ -581,7 +624,7 @@ export default function LoneWolfPWA() {
                   setIsMapOpen(false);
                 }}>
                 <div className="modal-wrapper">
-                  <img src={`${import.meta.env.BASE_URL}${currentBook.path}/images/map.png`} style={{"borderRadius": "20px"}}></img>
+                  <img src={`${import.meta.env.BASE_URL}${currentBook.id}/images/map.png`} style={{"borderRadius": "20px"}}></img>
                 </div>
               </div>
             )}
