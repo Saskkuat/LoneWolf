@@ -1,5 +1,6 @@
 import "./app.css";
 import booksData from './books.json';
+import characterTemplate from './character.json';
 import { useState, useEffect } from "react";
 import { Play, Pause, StopCircle, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -28,17 +29,24 @@ export default function LoneWolfPWA() {
   const [hasStarted, setHasStarted] = useState(currentSection);
   const [audioProgress, setAudioProgress] = useState(0); // Progress bar state
   const [audioDuration, setAudioDuration] = useState(0); // Audio duration state
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isVisitedSectionsModalOpen, setIsVisitedSectionsModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
   const [sectionContents, setSectionContents] = useState({});
-  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isCombatSection, setIsCombatSection] = useState(false);
   const [expandedCombatRatio, setExpandedCombatRatio] = useState(false);
   const [isDeadEnd, setIsDeadEnd] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [result, setResult] = useState(null);
   const [isDiceSection, setIsDiceSection] = useState(false);
-  const [newBookId, setNewBookId] = useState(null);
+  const [character, setCharacter] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("character")) || null;
+    } catch (error) {
+      return null; // Fallback in case of corrupted storage
+    }
+  });
+  const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
 
   const setCurrentBookInfo = (bookId) => {
     const book = validBooks.find(e => e.id === bookId);
@@ -88,6 +96,123 @@ export default function LoneWolfPWA() {
     setCurrentSection(null);
     setHasStarted(false);
   };
+
+  const resetCharacter = () => {
+    localStorage.removeItem("character");
+    setCharacter(null);
+  }
+
+  // Carousel with dragn and wheel
+  useEffect(() => {
+    if (!validBooks || validBooks.length == 0) return;
+    if (currentBook) return;
+
+    /*--------------------
+    Vars
+    --------------------*/
+    let progress = 0
+    let startX = 0
+    let active = 0
+    let isDown = false
+
+    /*--------------------
+    Contants
+    --------------------*/
+    const speedWheel = 0.02
+    const speedDrag = -0.1
+
+    /*--------------------
+    Get Z
+    --------------------*/
+    const getZindex = (array, index) => (array.map((_, i) => (index === i) ? array.length : array.length - Math.abs(index - i)))
+
+    /*--------------------
+    Items
+    --------------------*/
+    const $items = document.querySelectorAll('.carousel-item')
+
+    const displayItems = (item, index, active) => {
+      const zIndex = getZindex([...$items], active)[index]
+      item.style.setProperty('--zIndex', zIndex)
+      item.style.setProperty('--active', (index-active)/$items.length)
+
+      if (item.style.getPropertyValue("--active") == "0") {
+        setCurrentBookIndex(item.dataset["bookId"]);
+      }
+    }
+
+    /*--------------------
+    Animate
+    --------------------*/
+    const animate = () => {
+      progress = Math.max(0, Math.min(progress, 100))
+      active = Math.floor(progress/100*($items.length-1))
+      
+      $items.forEach((item, index) => displayItems(item, index, active))
+    }
+    animate()
+
+    /*--------------------
+    Click on Items
+    --------------------*/
+    $items.forEach((item, i) => {
+      item.addEventListener('click', () => {
+        progress = (i/$items.length) * 100 + 20
+        animate()
+      })
+    })
+
+    /*--------------------
+    Handlers
+    --------------------*/
+    const handleWheel = e => {
+      const wheelProgress = e.deltaY * speedWheel
+      progress = progress + wheelProgress
+      animate()
+    }
+
+    const handleMouseMove = (e) => {
+      if (!isDown) return
+      const x = e.clientX || (e.touches && e.touches[0].clientX) || 0
+      const mouseProgress = (x - startX) * speedDrag
+      progress = progress + mouseProgress
+      startX = x
+      animate()
+    }
+
+    const handleMouseDown = e => {
+      isDown = true
+      startX = e.clientX || (e.touches && e.touches[0].clientX) || 0
+    }
+
+    const handleMouseUp = () => {
+      isDown = false
+    }
+
+    /*--------------------
+    Listeners
+    --------------------*/
+    document.addEventListener('mousewheel', handleWheel)
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('touchstart', handleMouseDown)
+    document.addEventListener('touchmove', handleMouseMove)
+    document.addEventListener('touchend', handleMouseUp)
+
+  }, [validBooks, currentBook]);
+
+  useEffect(() => {
+    if (!currentBookIndex) return;
+
+    const btnTitle = document.querySelector(".wood-button.book-title");
+    if (!btnTitle) return;
+
+    const book = validBooks.find(e => e.id === currentBookIndex);
+    btnTitle.innerHTML = book[`name-${language}`];
+    btnTitle.dataset["bookId"] = book.id;
+
+  }, [currentBookIndex, language, currentBook])
 
   useEffect(() => {
     setTimeout(function() { 
@@ -293,7 +418,7 @@ export default function LoneWolfPWA() {
   };
 
   const toggleMap = () => {
-    setIsMapOpen(!isMapOpen);
+    setIsMapModalOpen(!isMapModalOpen);
   };
 
   const rollDice = () => {
@@ -329,29 +454,18 @@ export default function LoneWolfPWA() {
     stopAudio();
   }
 
-  const handleBookClick = (event) => {
-    const bookId = event.target.dataset["bookId"];
-    setCurrentBookInfo(bookId);
-  }
+  useEffect(() => {
+    if (!isCharacterModalOpen && !isMapModalOpen && !isVisitedSectionsModalOpen) {
+      document.body.style.removeProperty("overflow");
+    } else {
+      document.body.style.setProperty("overflow", "hidden");
+    }
 
-  const handleChapterClick = (target) => {
-    const newSection = parseInt(target.getAttribute("href").replace("chapter", "").replace(".html", ""));
-    startAdventure(null, newSection);
-  }
+  }, [isCharacterModalOpen, isMapModalOpen, isVisitedSectionsModalOpen])
 
-  const handleMapClick = () => {
-    setIsMapOpen(true);
-  }
-
-  const handleNewBookClick = (target) => {
-    const bookId = target.getAttribute("href").match(/\/([^\/]+)\/title\.htm$/);
-    changeSelectedBook(null, bookId[1]);
-  }
-
-  const handleChoiceClick = (target) => {
-    const newSection = parseInt(target.getAttribute("href").replace("sect", "").replace(".htm", ""));
-    setCurrentSection(newSection);
-  };
+  useEffect(() => {
+    console.log(character);
+  }, [character]);
 
   // Set handlers
   useEffect(() => {
@@ -389,121 +503,58 @@ export default function LoneWolfPWA() {
     };
   }, [currentBook, content, currentSection]);
 
-  // Carousel with dragn and wheel
-  useEffect(() => {
-    if (!validBooks || validBooks.length == 0) return;
-    if (currentBook) return;
+  const handleBookClick = (event) => {
+    const bookId = event.target.dataset["bookId"];
+    setCurrentBookInfo(bookId);
+  }
 
-    /*--------------------
-    Vars
-    --------------------*/
-    let progress = 0
-    let startX = 0
-    let active = 0
-    let isDown = false
+  const handleChapterClick = (target) => {
+    const newSection = parseInt(target.getAttribute("href").replace("chapter", "").replace(".html", ""));
+    startAdventure(null, newSection);
+  }
 
-    /*--------------------
-    Contants
-    --------------------*/
-    const speedWheel = 0.02
-    const speedDrag = -0.1
+  const handleMapClick = () => {
+    setIsMapModalOpen(true);
+  }
 
-    /*--------------------
-    Get Z
-    --------------------*/
-    const getZindex = (array, index) => (array.map((_, i) => (index === i) ? array.length : array.length - Math.abs(index - i)))
+  const handleNewBookClick = (target) => {
+    const bookId = target.getAttribute("href").match(/\/([^\/]+)\/title\.htm$/);
+    changeSelectedBook(null, bookId[1]);
+  }
 
-    /*--------------------
-    Items
-    --------------------*/
-    const $items = document.querySelectorAll('.carousel-item')
+  const handleChoiceClick = (target) => {
+    const newSection = parseInt(target.getAttribute("href").replace("sect", "").replace(".htm", ""));
+    setCurrentSection(newSection);
+  };
 
-    const displayItems = (item, index, active) => {
-      const zIndex = getZindex([...$items], active)[index]
-      item.style.setProperty('--zIndex', zIndex)
-      item.style.setProperty('--active', (index-active)/$items.length)
+  const handleCharacterSave = () => {
+    //characterTemplate;    
+    //JSON.parse(localStorage.getItem("currentBook")) || null;
+    //localStorage.setItem("currentBook", JSON.stringify(book));
 
-      if (item.style.getPropertyValue("--active") == "0") {
-        setCurrentBookIndex(item.dataset["bookId"]);
-      }
-    }
+    let character = JSON.parse(localStorage.getItem("character")) || structuredClone(characterTemplate);
+    character.combat = 15;
+    character.endurance = 27;
+    character.kai[0] = { discipline: "Hunting", rank: "Novice" };
+    character.kai[1] = { discipline: "Six senses", rank: "Novice" };
+    character.kai[2] = { discipline: "Mind blast", rank: "Novice" };
+    character.kai[3] = { discipline: "Mind shiled", rank: "Novice" };
+    character.kai[4] = { discipline: "Tracking", rank: "Novice" };
+    character.weapons[0] = "Sword";
+    character.weapons[1] = "Staff";
+    character.coins = 8;
+    character.meals = 3;
+    character.backpack = [ "book", "bottle", "pants", "rat", "pasta", "girimun", "coyote", "tire", "test" ];
+    character.special = [ { description: "helmet", effect: "+2 to endurance" } ]
 
-    /*--------------------
-    Animate
-    --------------------*/
-    const animate = () => {
-      progress = Math.max(0, Math.min(progress, 100))
-      active = Math.floor(progress/100*($items.length-1))
-      
-      $items.forEach((item, index) => displayItems(item, index, active))
-    }
-    animate()
-
-    /*--------------------
-    Click on Items
-    --------------------*/
-    $items.forEach((item, i) => {
-      item.addEventListener('click', () => {
-        progress = (i/$items.length) * 100 + 20
-        animate()
-      })
-    })
-
-    /*--------------------
-    Handlers
-    --------------------*/
-    const handleWheel = e => {
-      const wheelProgress = e.deltaY * speedWheel
-      progress = progress + wheelProgress
-      animate()
-    }
-
-    const handleMouseMove = (e) => {
-      if (!isDown) return
-      const x = e.clientX || (e.touches && e.touches[0].clientX) || 0
-      const mouseProgress = (x - startX) * speedDrag
-      progress = progress + mouseProgress
-      startX = x
-      animate()
-    }
-
-    const handleMouseDown = e => {
-      isDown = true
-      startX = e.clientX || (e.touches && e.touches[0].clientX) || 0
-    }
-
-    const handleMouseUp = () => {
-      isDown = false
-    }
-
-    /*--------------------
-    Listeners
-    --------------------*/
-    document.addEventListener('mousewheel', handleWheel)
-    document.addEventListener('mousedown', handleMouseDown)
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-    document.addEventListener('touchstart', handleMouseDown)
-    document.addEventListener('touchmove', handleMouseMove)
-    document.addEventListener('touchend', handleMouseUp)
-
-  }, [validBooks, currentBook]);
-
-  useEffect(() => {
-    if (!currentBookIndex) return;
-
-    const btnTitle = document.querySelector(".wood-button.book-title");
-    if (!btnTitle) return;
-
-    const book = validBooks.find(e => e.id === currentBookIndex);
-    btnTitle.innerHTML = book[`name-${language}`];
-    btnTitle.dataset["bookId"] = book.id;
-
-  }, [currentBookIndex, language, currentBook])
+    localStorage.setItem("character", JSON.stringify(character));
+    setCharacter(character);
+  }
 
   return (
     <div className="app-container">
-      <button className="wood-button corner-bottom-right" onClick={changeLanguage}>{language.toUpperCase()}</button>
+      <button className="wood-button corner-bottom-right" onClick={changeLanguage}>{language.toUpperCase()}</button>      
+      <button className="wood-button corner-bottom-right" onClick={() => setIsCharacterModalOpen(true)}>Player</button>
       {!currentBook && (
         <div className="book-container">
           <div className="carved">{language == "br" ? "Lobo Solitário" : "Lone Wolf"}</div>
@@ -538,160 +589,282 @@ export default function LoneWolfPWA() {
           </div>
         </div>
       )}
-      {currentBook && !hasStarted && (
+      {currentBook && (
         <div>
           <div className="carved">{currentBook[`name-${language}`]}</div>
-          <div className="chapters">
-            <div className="parchment" style={{"marginTop": "0"}}></div>
-            <div className="content">
-              <div className="section-controls">
-                <button onClick={changeSelectedBook} className="wood-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
-                <button onClick={startAdventure} className="wood-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
-              </div>
-              <div className="text-content">
-                <div className="title" style={{"fontSize": "1.2em", "lineHeight": "2em", "marginTop": "1.2em"}}>
-                  {language == "br" ? "Ou selecione um capítulo" : "Or select a chapter"}
-                </div>                
-                <ul>
-                  {[...Array((currentBook.sections || 0) + 1).keys()]
-                    .filter((section) => section !== 0) // Exclude section 0
-                    .map((section) => (
-                      <li>
-                        <p key={section} className="choice chapter"><a href={"chapter" + section + ".html"}>{section}</a></p>
-                      </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="wax-seal parchment-end">{language == "br" ? "LS" : "LW"}</div>
-            </div>
-          </div>
-        </div>
-      )}
-      {currentBook && hasStarted && currentSection != null && (
-        <div>
-          <div className="carved">{currentBook[`name-${language}`]}</div>
-          <div className="section-controls">
-            <button onClick={() => setIsModalOpen(true)} className="wood-button">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
-            <button onClick={resetSection} className="wood-button">{language === "br" ? "Reiniciar aventura" : "Restart adventure"}</button>
-            {isModalOpen && (
-              <div className="modal-overlay" onClick={() => {
-                  setIsModalOpen(false);
-                  setExpandedSection(null);
-                }}>
-                <div className="modal-wrapper">
-                  <img src={`${import.meta.env.BASE_URL}images/background-modal.png`}></img>
-                  <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                    <div className="title" style={{ "margin": "2rem"}}>{language === "br" ? "Sua jornada" : "Your journey"}</div>
-                    <div className="modal-overflow">
-                      <ul>
-                        {visitedSections.slice().reverse().map((section) => (
-                          <li key={section}>
-                            <button
-                              onClick={() => toggleSection(section)}
-                              className="section-toggle"
-                            >
-                              {language === "br" ? "Capítulo" : "Chapter"} {section} {expandedSection === section ? <ChevronUp /> : <ChevronDown />}
-                            </button>
-                            {expandedSection === section && (
-                              <div
-                                className="section-content"
-                                dangerouslySetInnerHTML={{ __html: sectionContents[section] || "Loading..." }}
-                              />
-                            )}
+          {!hasStarted && (
+            <div>
+              <div className="chapters">
+                <div className="parchment" style={{"marginTop": "0"}}></div>
+                <div className="content">
+                  <div className="section-controls">
+                    <button onClick={changeSelectedBook} className="wood-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
+                    <button onClick={startAdventure} className="wood-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
+                  </div>
+                  <div className="text-content">
+                    <div className="title" style={{"fontSize": "1.2em", "lineHeight": "2em", "marginTop": "1.2em"}}>
+                      {language == "br" ? "Ou selecione um capítulo" : "Or select a chapter"}
+                    </div>                
+                    <ul>
+                      {[...Array((currentBook.sections || 0) + 1).keys()]
+                        .filter((section) => section !== 0) // Exclude section 0
+                        .map((section) => (
+                          <li>
+                            <p key={section} className="choice chapter"><a href={"chapter" + section + ".html"}>{section}</a></p>
                           </li>
-                        ))}
-                      </ul>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="wax-seal parchment-end">{language == "br" ? "LS" : "LW"}</div>
+                </div>
+              </div>
+            </div>
+          )}               
+          {hasStarted && currentSection != null && (
+            <div>
+              {isCharacterModalOpen && (
+                <div className="modal-overlay" onClick={() => { setIsCharacterModalOpen(false); }}>
+                  <div className="modal-wrapper">
+                    <img src={`${import.meta.env.BASE_URL}images/background-modal.png`}></img>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                      <div className="title" style={{ "margin": "2rem"}}>{language === "br" ? "Personagem" : "Character"}</div>
+                      {character && (
+                        <div className="modal-overflow">
+                          {/* Backpack Items, Belt Pouch & Meals */}
+                          <div className="backpack-wrapper">
+                            <div className="pouch">
+                              <div>
+                                <h4>Belt Pouch (max. 50)</h4>
+                                <input type="text" className="square" value={character.coins} />
+                              </div>
+                              <div>
+                                <h4>Meals</h4>
+                                <input type="text" className="square" value={character.meals} />
+                              </div>
+                            </div>
+                            <div className="backpack">
+                              <h4>Backpack Items</h4>
+                              <table>
+                                <tbody>
+                                  {[...Array(4)].map((_, index) => (
+                                    <tr key={index}>
+                                      <td style={{width: "5%"}}>{index + 1}</td>
+                                      <td><input type="text" className="inventoria" value={character.backpack[index]} /></td>
+                                      <td style={{width: "5%"}}>{index + 5}</td>
+                                      <td><input type="text" className="inventoria" value={character.backpack[index + 4]} /></td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              <p>Can be discarded when not in combat</p>
+                            </div>
+                          </div>
+                          <div className="special-wrapper">
+                            <h4>Special Items</h4>
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>Description</th>
+                                  <th>Known Effects</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[...Array(character.special.length + 1)].map((_, index) => (
+                                  <tr key={index}>
+                                    <td><input type="text" className="inventoria" value={ index < character.special.length ? character.special[index].description : ""} /></td>
+                                    <td><input type="text" className="inventoria" value={ index < character.special.length ? character.special[index].effect : ""} /></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {/* Kai Disciplines */}
+                          <div className="disciplines-wrapper">
+                            <h4>Kai Disciplines</h4>
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>Name</th>
+                                  <th>Rank</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[...Array(5)].map((_, index) => (
+                                  <tr key={index}>
+                                    <td><input type="text" className="inventoria" value={character.kai[index].discipline} /></td>
+                                    <td><input type="text" className="inventoria" value={character.kai[index].rank} /></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {/* Combat Skill, Endurance Points & Weapons */}
+                          <div className="points-wrapper">
+                            <div>
+                              <label>Combat Skill</label>
+                              <input type="text" value={character.combat} />
+                            </div>
+                            <div>
+                              <label>Endurance Points</label>
+                              <input type="text" value={character.endurance}/>
+                              <p>Can never go above initial score. 0 = dead</p>
+                            </div>
+                            <h2>Weapons</h2>
+                            <div>
+                              <input type="text" value={character.weapons[0]} />
+                              <input type="text" value={character.weapons[1]} />
+                            </div>
+                            <p>
+                              If holding Weapon and appropriate Weaponskill in combat +2CS. If Combat entered carrying no Weapon -4CS.
+                            </p>
+                          </div>
+                          {/* Combat Record Table */}
+                          <div className="combat-wrapper">
+                            <h2>Combat Record</h2>
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>Lone Wolf EP</th>
+                                  <th>Combat Ratio</th>
+                                  <th>Enemy EP</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[...Array(5)].map((_, i) => (
+                                  <tr key={i} className={i % 2 === 0 ? "" : ""}>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}                      
+                      <div className="modal-controls">
+                        <button onClick={() => handleCharacterSave()} className="wood-button">{language === "br" ? "Salvar" : "Save"}</button>
+                        <button onClick={() => resetCharacter()} className="wood-button">{language === "br" ? "Limpar" : "Clear"}</button>
+                        <button onClick={() => setIsCharacterModalOpen(false)} className="wood-button">{language === "br" ? "Fechar" : "Close"}</button>
+                      </div>
                     </div>
-                    <button onClick={() => setIsModalOpen(false)} className="wood-button">{language === "br" ? "Fechar" : "Close"}</button>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-          <div className="parchment"></div>
-          <div className="content">
-            <div className="section-controls">
-              {currentSection != 0 && (
-                <div className="title">
-                  <div className="wax-seal">{currentSection}</div>
-                </div>
               )}
-              <div className="map-container">
-                <img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" onClick={toggleMap} ></img>
-              </div>
-              {isMapOpen && (
-              <div className="modal-overlay" onClick={() => {
-                  setIsMapOpen(false);
-                }}>
-                <div className="modal-wrapper">
-                  <img src={`${import.meta.env.BASE_URL}${currentBook.id}/images/map.png`} style={{"borderRadius": "20px"}}></img>
-                </div>
-              </div>
-            )}
-              <div className="audio-player">
-                <div className="audio-controls">
-                  <button onClick={togglePlayPause} className="wood-button">
-                    {isPlaying ? <Pause /> : <Play />}
-                  </button>
-                  <button onClick={stopAudio} className="wood-button">
-                    <StopCircle />
-                  </button>
-                  <button onClick={restartAudio} className="wood-button">
-                    <RotateCcw />
-                  </button>
-                </div>
-                <div 
-                  className="audio-progress-bar"
-                  onClick={handleProgressBarClick}
-                >
-                  <div
-                    className="audio-progress"
-                    style={{ width: `${audioProgress}%` }}
-                  />
-                </div>
-                <div className="audio-time">
-                  <span>{formatTime(Math.floor(audioProgress / 100 * audioDuration))} / {formatTime(Math.floor(audioDuration))}</span>
-                </div>
-              </div>
-            </div>
-            {currentSection == 0 && (
-              <div className="intro-content">
-                <p className="first intro">
-                    <span className="firstLetter">{language == "br" ? "O" : "T"}</span>
-                    <span className="intro">{language == "br" ? " caminho até aqui..." : "he story so far…"}</span>
-                </p>
-              </div>
-            )}
-            <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
-            {isDiceSection && (
-              <div className="dice-container">
-                <div className={`dice ${rolling ? "rolling" : ""} wood-button`} onClick={rollDice}>
-                  {rolling ? "🎲" : result ?? "🎲"}
-                </div>
-              </div>
-            )}
-            {isCombatSection && (
-              <div>
-                <button
-                  onClick={() => toggleCombatRatio()}
-                  className="wood-button"
-                >
-                  {language === "br" ? "Tabela de combate" : "Combat table"}
-                </button>
-                {expandedCombatRatio && (
-                  <div className="combat-ratio-tables">
-                    <img alt="Combat ratio table - negative" className="max-w-full h-auto rounded-lg shadow" src="images/crtneg.png"></img>
-                    <img alt="Combat ratio table - positive" className="max-w-full h-auto rounded-lg shadow" src="images/crtpos.png"></img>
+              <div className="section-controls">
+                <button onClick={() => setIsVisitedSectionsModalOpen(true)} className="wood-button">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
+                <button onClick={resetSection} className="wood-button">{language === "br" ? "Reiniciar aventura" : "Restart adventure"}</button>
+                {isVisitedSectionsModalOpen && (
+                  <div className="modal-overlay" onClick={() => {
+                      setIsVisitedSectionsModalOpen(false);
+                      setExpandedSection(null);
+                    }}>
+                    <div className="modal-wrapper">
+                      <img src={`${import.meta.env.BASE_URL}images/background-modal.png`}></img>
+                      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="title" style={{ "margin": "2rem"}}>{language === "br" ? "Sua jornada" : "Your journey"}</div>
+                        <div className="modal-overflow">
+                          <ul>
+                            {visitedSections.slice().reverse().map((section) => (
+                              <li key={section}>
+                                <button
+                                  onClick={() => toggleSection(section)}
+                                  className="section-toggle"
+                                >
+                                  {language === "br" ? "Capítulo" : "Chapter"} {section} {expandedSection === section ? <ChevronUp /> : <ChevronDown />}
+                                </button>
+                                {expandedSection === section && (
+                                  <div
+                                    className="section-content"
+                                    dangerouslySetInnerHTML={{ __html: sectionContents[section] || "Loading..." }}
+                                  />
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <button onClick={() => setIsVisitedSectionsModalOpen(false)} className="wood-button">{language === "br" ? "Fechar" : "Close"}</button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-            {isDeadEnd && (
-              <div>
-                <img src="images/blood.svg" alt="Blood" />
+              <div className="parchment"></div>
+              <div className="content">
+                <div className="section-controls">
+                  {currentSection != 0 && (
+                    <div className="title">
+                      <div className="wax-seal">{currentSection}</div>
+                    </div>
+                  )}
+                  <div className="map-container">
+                    <img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" onClick={toggleMap} ></img>
+                  </div>
+                  {isMapModalOpen && (
+                    <div className="modal-overlay" onClick={() => { setIsMapModalOpen(false); }}>
+                      <div className="modal-wrapper">
+                        <img src={`${import.meta.env.BASE_URL}${currentBook.id}/images/map.png`} style={{"borderRadius": "20px"}}></img>
+                      </div>
+                    </div>
+                  )}
+                  <div className="audio-player">
+                    <div className="audio-controls">
+                      <button onClick={togglePlayPause} className="wood-button">
+                        {isPlaying ? <Pause /> : <Play />}
+                      </button>
+                      <button onClick={stopAudio} className="wood-button">
+                        <StopCircle />
+                      </button>
+                      <button onClick={restartAudio} className="wood-button">
+                        <RotateCcw />
+                      </button>
+                    </div>
+                    <div className="audio-progress-bar" onClick={handleProgressBarClick} >
+                      <div
+                        className="audio-progress" style={{ width: `${audioProgress}%` }} />
+                    </div>
+                    <div className="audio-time">
+                      <span>{formatTime(Math.floor(audioProgress / 100 * audioDuration))} / {formatTime(Math.floor(audioDuration))}</span>
+                    </div>
+                  </div>
+                </div>
+                {currentSection == 0 && (
+                  <div className="intro-content">
+                    <p className="first intro">
+                        <span className="firstLetter">{language == "br" ? "O" : "T"}</span>
+                        <span className="intro">{language == "br" ? " caminho até aqui..." : "he story so far…"}</span>
+                    </p>
+                  </div>
+                )}
+                <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
+                {isDiceSection && (
+                  <div className="dice-container">
+                    <div className={`dice ${rolling ? "rolling" : ""} wood-button`} onClick={rollDice}>
+                      {rolling ? "🎲" : result ?? "🎲"}
+                    </div>
+                  </div>
+                )}
+                {isCombatSection && (
+                  <div>
+                    <button onClick={() => toggleCombatRatio()} className="wood-button">
+                      {language === "br" ? "Tabela de combate" : "Combat table"}
+                    </button>
+                    {expandedCombatRatio && (
+                      <div className="combat-ratio-tables">
+                        <img alt="Combat ratio table - negative" className="max-w-full h-auto rounded-lg shadow" src="images/crtneg.png"></img>
+                        <img alt="Combat ratio table - positive" className="max-w-full h-auto rounded-lg shadow" src="images/crtpos.png"></img>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {isDeadEnd && (
+                  <div>
+                    <img src="images/blood.svg" alt="Blood" />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
       <svg>
