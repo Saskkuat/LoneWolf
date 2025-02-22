@@ -523,20 +523,41 @@ section#footnotes {
   height: 90%;
   text-align: -webkit-center;
 }
+
+.modal-wrapper .close {
+  padding: 0;
+  margin: 0;
+  position: absolute;
+  right: 0;
+  top: 1rem;
+  cursor: pointer;
+}
+
+  .modal-wrapper .close::before {
+   content: "\2718"; 
+   font-size: 6rem;
+   color: red;
+  }
   
 .modal-content {
-  padding: 20px;
+  padding: 1.5rem;
   text-align: center;
   overflow: hidden;
   width: 90%;
   height: 100%;
-  padding-left: 3rem;
+  padding-left: 2rem;
+}
+
+.modal-content .title .wood-button {  
+  margin-left: 2rem;
+  font-size: 2rem;
+  vertical-align: text-top;
 }
 
 .modal-overflow {  
   overflow: auto;
   width: 100%;
-  height: 80%;
+  height: 85%;
   margin-bottom: 1.5rem;
 }
   
@@ -628,14 +649,33 @@ section#footnotes {
   display: block;
 }
 
+.backpack-wrapper,
+.special-wrapper,
+.disciplines-wrapper,
+.points-wrapper,
+.combat-wrapper {
+  margin-bottom: 2.5rem;
+}
+
 .backpack-wrapper h4,
 .special-wrapper h4,
-.disciplines-wrapper h4 {
+.disciplines-wrapper h4,
+.points-wrapper h4,
+.combat-wrapper h4 {
   margin: 1rem 0;
   text-shadow: 0px 1px 0px rgba(255,255,255,.3), 0px -1px 0px rgba(0,0,0,.7); /* engraved text */
 }
 
-.backpack-wrapper .pouch {
+.backpack-wrapper table,
+.special-wrapper table,
+.disciplines-wrapper table,
+.points-wrapper table,
+.combat-wrapper table {
+  width: 100%;
+}
+
+.backpack-wrapper .pouch,
+.points-wrapper .points {
   display: flex;
   flex-wrap: nowrap;
   align-content: center;
@@ -646,11 +686,11 @@ section#footnotes {
 
 input.square {
   width: 5rem;
-  height: 5rem;
+  height: 4rem;
   outline: none;
   border-radius: 5px;
-  font-size: 3rem;
-  padding-left: 1.5rem;
+  font-size: 2.5rem;
+  text-align: center;
 }
 
 .backpack-wrapper .backpack {
@@ -666,7 +706,7 @@ input.inventoria {
   width: 90%;
   outline: none;
   border-radius: 5px;
-  font-size: 2rem;
+  font-size: 1.5rem;
   padding-left: .4rem;
 }
 
@@ -674,15 +714,38 @@ input.inventoria {
   text-align: start;
 }
 
-.backpack p {
+.backpack p,
+.weapons p {
   margin: .5rem 0;
-  font-size: 1.6rem;
+  font-size: 1.3rem;
+  text-align: center;
 }
 
 .special-wrapper table {
   margin-bottom: 2rem;
 }
 
+.sub-header th {
+  font-size: 1.5rem;
+}
+
+.combat-wrapper input {
+  font-size: 2.2rem;
+  height: 2.8rem;
+}
+
+.combat-wolf {
+  font-size: 5rem;
+  padding-top: 3.5rem;
+}
+
+.combat-event .dice-container {
+  margin: .5rem 1rem;
+}
+
+.combat-event .dice-container div {
+  width: 4rem;
+}
   
 span.external {
   color: #6e0cc9;
@@ -699,7 +762,7 @@ span.external {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 20px;
+  margin: 2rem;
 }
 
 .dice {
@@ -742,6 +805,10 @@ span.external {
   align-content: center;
   justify-content: center;
   align-items: center;
+}
+
+.no-events {
+  pointer-events: none;
 }
 
 

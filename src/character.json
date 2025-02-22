@@ -1,7 +1,11 @@
 {
-    "combat": 0,
-    "endurance": 0,
+    "skill": 0,
+    "endurance": 1,
     "kai": [
+        { "discipline": "", "rank": "" },
+        { "discipline": "", "rank": "" },
+        { "discipline": "", "rank": "" },
+        { "discipline": "", "rank": "" },
         { "discipline": "", "rank": "" },
         { "discipline": "", "rank": "" },
         { "discipline": "", "rank": "" },
@@ -13,7 +17,5 @@
     "meals": 0,
     "backpack": [ "", "", "", "", "", "", "", "" ],
     "special": [
-        { "description": "", "effect": "" }
     ]
-
 }

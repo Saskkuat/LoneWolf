@@ -1,6 +1,7 @@
 import "./app.css";
 import booksData from './books.json';
 import characterTemplate from './character.json';
+import combatResultTable from './combat-results.json';
 import { useState, useEffect } from "react";
 import { Play, Pause, StopCircle, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -36,17 +37,30 @@ export default function LoneWolfPWA() {
   const [isCombatSection, setIsCombatSection] = useState(false);
   const [expandedCombatRatio, setExpandedCombatRatio] = useState(false);
   const [isDeadEnd, setIsDeadEnd] = useState(false);
-  const [rolling, setRolling] = useState(false);
-  const [result, setResult] = useState(null);
+  const [diceRolling, setDiceRolling] = useState(false);
+  const [diceResult, setDiceResult] = useState(null);
   const [isDiceSection, setIsDiceSection] = useState(false);
+  const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
   const [character, setCharacter] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("character")) || null;
+      return JSON.parse(localStorage.getItem("character")) || characterTemplate;
     } catch (error) {
       return null; // Fallback in case of corrupted storage
     }
   });
-  const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
+  const combatEnemiesTemplate = [
+    {
+      "skill": null,
+      "endurance": null,
+      "ratio": null,
+      "taken": null,
+      "dealt": null,
+      "dead": false
+    }
+  ]
+  const [combatEnemies, setCombatEnemies] = useState(null);
+  const [rollingCombatDice, setRollingCombatDice] = useState({});
+  const [combatDiceResult, setCombatDiceResult] = useState({});
 
   const setCurrentBookInfo = (bookId) => {
     const book = validBooks.find(e => e.id === bookId);
@@ -97,10 +111,22 @@ export default function LoneWolfPWA() {
     setHasStarted(false);
   };
 
+  const loadCharacter = () => {    
+    let newCharacter = JSON.parse(localStorage.getItem("character")) || structuredClone(characterTemplate);
+    localStorage.setItem("character", JSON.stringify(newCharacter));
+    setCharacter(newCharacter);
+  }
+
+  const saveCharacter = (updatedCharacter) => {
+    localStorage.setItem("character", JSON.stringify(updatedCharacter));
+  }
+
   const resetCharacter = () => {
     localStorage.removeItem("character");
-    setCharacter(null);
+    setCharacter(characterTemplate);
   }
+  
+  useState(() => { loadCharacter(); }, [isCharacterModalOpen]);
 
   // Carousel with dragn and wheel
   useEffect(() => {
@@ -215,9 +241,11 @@ export default function LoneWolfPWA() {
   }, [currentBookIndex, language, currentBook])
 
   useEffect(() => {
-    setTimeout(function() { 
+    const timeout = setTimeout(function() { 
       parchmentHeight();
-    }, 25);
+    }, 25);    
+
+    return () => clearTimeout(timeout);
   }, [currentBook, currentSection, content, expandedCombatRatio])
 
   const parchmentHeight = () => {
@@ -261,7 +289,7 @@ export default function LoneWolfPWA() {
     setIsCombatSection(false);
     setIsDeadEnd(false);
     setIsDiceSection(false);
-    setResult(null);    
+    setDiceResult(null);
     setExpandedCombatRatio(false);
 
     fetch(`${import.meta.env.BASE_URL}${currentBook.id}/text/${language}/${section}.html`)
@@ -417,25 +445,26 @@ export default function LoneWolfPWA() {
     }
   };
 
-  const toggleMap = () => {
-    setIsMapModalOpen(!isMapModalOpen);
-  };
+  const rollParchmentDice = () => {
+    if (diceRolling) return; // Prevent multiple rolls
 
-  const rollDice = () => {
-    if (rolling) return; // Prevent multiple rolls
-
-    setRolling(true);
+    setDiceRolling(true);
     
     // Simulate rolling time
     setTimeout(() => {
-      let newRoll = Math.floor(Math.random() * 10) + 1; // Generate 1-10
-      if (newRoll === 10) {
-        newRoll = 0;
-      }
-      setResult(newRoll);
-      setRolling(false);
+      const newRoll = rollDice();
+      setDiceResult(newRoll);
+      setDiceRolling(false);
     }, 1500); // Duration matches CSS animation
   };
+
+  const rollDice = () => {    
+    let newRoll = Math.floor(Math.random() * 10) + 1; // Generate 1-10
+    if (newRoll === 10) {
+      newRoll = 0;
+    }
+    return newRoll;
+  }
 
   const toggleSection = async (section) => {
     if (expandedSection === section) {
@@ -448,11 +477,28 @@ export default function LoneWolfPWA() {
     }
   };
 
+  const validateField = (value, length, max) => {
+    if (
+      value.length <= length && // Length restriction
+      (
+        !max || // Not a number, validate only length as string
+        (
+          value >= 0 && // Min number value restriction
+          value <= max && // Max number value restriction
+          !isNaN(value) // Ensure it's a valid number
+        )
+      )
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   const stopDefaultHandler = (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
     stopAudio();
-  }
+  };
 
   useEffect(() => {
     if (!isCharacterModalOpen && !isMapModalOpen && !isVisitedSectionsModalOpen) {
@@ -462,10 +508,6 @@ export default function LoneWolfPWA() {
     }
 
   }, [isCharacterModalOpen, isMapModalOpen, isVisitedSectionsModalOpen])
-
-  useEffect(() => {
-    console.log(character);
-  }, [character]);
 
   // Set handlers
   useEffect(() => {
@@ -527,34 +569,115 @@ export default function LoneWolfPWA() {
     setCurrentSection(newSection);
   };
 
-  const handleCharacterSave = () => {
-    //characterTemplate;    
-    //JSON.parse(localStorage.getItem("currentBook")) || null;
-    //localStorage.setItem("currentBook", JSON.stringify(book));
+  const handleCharacterModalOpen = (open) => {
+    setIsCharacterModalOpen(open); 
+    setDiceResult(null); 
+    setCombatEnemies(combatEnemiesTemplate);
+  };
 
-    let character = JSON.parse(localStorage.getItem("character")) || structuredClone(characterTemplate);
-    character.combat = 15;
-    character.endurance = 27;
-    character.kai[0] = { discipline: "Hunting", rank: "Novice" };
-    character.kai[1] = { discipline: "Six senses", rank: "Novice" };
-    character.kai[2] = { discipline: "Mind blast", rank: "Novice" };
-    character.kai[3] = { discipline: "Mind shiled", rank: "Novice" };
-    character.kai[4] = { discipline: "Tracking", rank: "Novice" };
-    character.weapons[0] = "Sword";
-    character.weapons[1] = "Staff";
-    character.coins = 8;
-    character.meals = 3;
-    character.backpack = [ "book", "bottle", "pants", "rat", "pasta", "girimun", "coyote", "tire", "test" ];
-    character.special = [ { description: "helmet", effect: "+2 to endurance" } ]
+  // Generic handler for input changes (numbers & strings)
+  const handleCharacterChange = (event) => {
 
-    localStorage.setItem("character", JSON.stringify(character));
-    setCharacter(character);
+    const { name, value, max, maxLength } = event.target;
+    if (!validateField(value, maxLength, max)) return;
+
+    setCharacter((prev) => {
+      const updatedCharacter = { ...prev, [name]: value };
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
+  };
+
+  // Handler for array inputs (Kai, Weapons, Backpack, Special)
+  const handleCharacterArrayChange = (category, index, field, value) => {
+    if (!validateField(value, 99)) return;
+
+    setCharacter((prev) => {
+      const updatedArray = [...prev[category]];
+      if (typeof updatedArray[index] === "object" || field) {
+        updatedArray[index] = { ...updatedArray[index], [field]: value };
+      } else {
+        updatedArray[index] = value;
+      }
+      saveCharacter({ ...prev, [category]: updatedArray });
+      return { ...prev, [category]: updatedArray };
+    });
+  };
+
+  const handleEnemyArrayChange = (category, index, value) => {
+    if (!validateField(value, 2, 99)) return;
+
+    setCombatEnemies((prev) => {
+      const updatedArray = [...prev];
+      updatedArray[index] = { ...updatedArray[index], [category]: value };
+      if (updatedArray.length === index + 1) {
+        updatedArray.push(combatEnemiesTemplate);
+      }
+      // Check if the updated array is different from the previous state
+      if (JSON.stringify(prev) === JSON.stringify(updatedArray)) {
+        return prev; // No need to update state if it's the same
+      }
+      return updatedArray;
+    });
+  };
+
+  const handleCombat = (index) => {
+    if (!isCharacterModalOpen) return;
+
+    const dice = document.getElementById(`dice-${index}`);
+    if (!dice || dice.classList.contains('no-events')) return;
+
+    const combatDices = document.querySelectorAll('[data-dice="combat"]')
+    combatDices.forEach(e => e.classList.add('no-events'));
+
+    dice.innerText = "🎲";
+    setRollingCombatDice((prev) => ({ ...prev, [index]: true }));
+    
+    // Simulate rolling time
+    setTimeout(() => {
+      const newRoll = rollDice();
+      dice.innerText = newRoll;
+      setRollingCombatDice((prev) => ({ ...prev, [index]: false }));
+      combatDices.forEach(e => e.classList.remove('no-events'));
+
+      setCombatEnemies((prev) => {
+        const updatedArray = prev.map((enemy, enemyIndex) => {
+          if (enemy.dead || !enemy.skill) return enemy; // Keep dead enemies unchanged
+          if (enemyIndex !== index) return enemy;
+  
+          let ratio = parseInt(character.skill) - parseInt(enemy.skill);
+          if (ratio > 11) ratio = 11;
+          if (ratio < -11) ratio = -11;
+  
+          const { enemy: enemyDamage, wolf } = combatResultTable[newRoll][ratio];
+  
+          enemy.ratio = ratio;
+          enemy.taken = parseInt(enemy.taken ?? 0) + parseInt(enemyDamage);
+          enemy.dealt = parseInt(enemy.dealt ?? 0) + parseInt(wolf);
+          enemy.endurance -= parseInt(enemy.taken);
+  
+          if (enemy.endurance <= 0) {
+            enemy.endurance = 0;
+            enemy.dead = true;
+          }
+  
+          return enemy;
+        });
+  
+        // Update the character's endurance with the sum of all dealt values
+        const totalDealt = updatedArray.filter((enemy) => !enemy.dead && enemy.skill).reduce((sum, enemy) => sum + parseInt(enemy.dealt || 0), 0);
+        character.endurance = parseInt(character.endurance) - parseInt(totalDealt);
+        saveCharacter(character);
+  
+        return updatedArray;
+      });
+    }, 1500); // Duration matches CSS animation
   }
 
   return (
     <div className="app-container">
       <button className="wood-button corner-bottom-right" onClick={changeLanguage}>{language.toUpperCase()}</button>      
-      <button className="wood-button corner-bottom-right" onClick={() => setIsCharacterModalOpen(true)}>Player</button>
+      <button className="wood-button corner-bottom-right" onClick={() => handleCharacterModalOpen(true)}>Player</button>
       {!currentBook && (
         <div className="book-container">
           <div className="carved">{language == "br" ? "Lobo Solitário" : "Lone Wolf"}</div>
@@ -623,11 +746,15 @@ export default function LoneWolfPWA() {
           {hasStarted && currentSection != null && (
             <div>
               {isCharacterModalOpen && (
-                <div className="modal-overlay" onClick={() => { setIsCharacterModalOpen(false); }}>
+                <div className="modal-overlay" onClick={() => handleCharacterModalOpen(false)}>
                   <div className="modal-wrapper">
+                    <div onClick={() => handleCharacterModalOpen(false)} className="close"></div>
                     <img src={`${import.meta.env.BASE_URL}images/background-modal.png`}></img>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                      <div className="title" style={{ "margin": "2rem"}}>{language === "br" ? "Personagem" : "Character"}</div>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>                      
+                      <div className="title" style={{ "margin": "2rem"}}>
+                        {language === "br" ? "Personagem" : "Character"}
+                        <button onClick={resetCharacter} className="wood-button">{language === "br" ? "Novo" : "New"}</button>
+                      </div>
                       {character && (
                         <div className="modal-overflow">
                           {/* Backpack Items, Belt Pouch & Meals */}
@@ -635,11 +762,11 @@ export default function LoneWolfPWA() {
                             <div className="pouch">
                               <div>
                                 <h4>Belt Pouch (max. 50)</h4>
-                                <input type="text" className="square" value={character.coins} />
+                                <input type="number"maxLength={2} max={50} className="square" name="coins" value={character.coins} onChange={handleCharacterChange} />
                               </div>
                               <div>
                                 <h4>Meals</h4>
-                                <input type="text" className="square" value={character.meals} />
+                                <input type="number" maxLength={2} max={99} className="square" name="meals" value={character.meals} onChange={handleCharacterChange} />
                               </div>
                             </div>
                             <div className="backpack">
@@ -649,9 +776,13 @@ export default function LoneWolfPWA() {
                                   {[...Array(4)].map((_, index) => (
                                     <tr key={index}>
                                       <td style={{width: "5%"}}>{index + 1}</td>
-                                      <td><input type="text" className="inventoria" value={character.backpack[index]} /></td>
+                                      <td>
+                                        <input type="text" maxLength={100} className="inventoria" value={character.backpack[index]} onChange={(e) => handleCharacterArrayChange("backpack", index, "", e.target.value)} />
+                                      </td>
                                       <td style={{width: "5%"}}>{index + 5}</td>
-                                      <td><input type="text" className="inventoria" value={character.backpack[index + 4]} /></td>
+                                      <td>
+                                        <input type="text" maxLength={100} className="inventoria" value={character.backpack[index + 4]} onChange={(e) => handleCharacterArrayChange("backpack", index + 4, "", e.target.value)} />
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -671,8 +802,12 @@ export default function LoneWolfPWA() {
                               <tbody>
                                 {[...Array(character.special.length + 1)].map((_, index) => (
                                   <tr key={index}>
-                                    <td><input type="text" className="inventoria" value={ index < character.special.length ? character.special[index].description : ""} /></td>
-                                    <td><input type="text" className="inventoria" value={ index < character.special.length ? character.special[index].effect : ""} /></td>
+                                    <td>
+                                      <input type="text" maxLength={100} className="inventoria" value={ index < character.special.length ? character.special[index].description : "" } onChange={(e) => handleCharacterArrayChange("special", index, "description", e.target.value)} />
+                                    </td>
+                                    <td>
+                                      <input type="text" maxLength={100} className="inventoria" value={ index < character.special.length ? character.special[index].effect : "" } onChange={(e) => handleCharacterArrayChange("special", index, "effect", e.target.value)} />
+                                    </td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -689,10 +824,14 @@ export default function LoneWolfPWA() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {[...Array(5)].map((_, index) => (
+                                {[...Array(character.kai.length)].map((_, index) => (
                                   <tr key={index}>
-                                    <td><input type="text" className="inventoria" value={character.kai[index].discipline} /></td>
-                                    <td><input type="text" className="inventoria" value={character.kai[index].rank} /></td>
+                                    <td>
+                                      <input type="text" maxLength={100} className="inventoria" value={ character.kai[index].discipline } onChange={(e) => handleCharacterArrayChange("kai", index, "discipline", e.target.value)} />
+                                    </td>
+                                    <td>
+                                      <input type="text" maxLength={100} className="inventoria" value={ character.kai[index].rank } onChange={(e) => handleCharacterArrayChange("kai", index, "rank", e.target.value)} />
+                                    </td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -700,53 +839,71 @@ export default function LoneWolfPWA() {
                           </div>
                           {/* Combat Skill, Endurance Points & Weapons */}
                           <div className="points-wrapper">
-                            <div>
-                              <label>Combat Skill</label>
-                              <input type="text" value={character.combat} />
+                            <div className="weapons">
+                              <h4>Weapons</h4>
+                              <table>
+                                <tbody>
+                                  <tr>
+                                    <td><input type="text" maxLength={100} className="inventoria" value={character.weapons[0]} onChange={(e) => handleCharacterArrayChange("weapons", 0, "", e.target.value)} /></td>
+                                    <td><input type="text" maxLength={100} className="inventoria" value={character.weapons[1]} onChange={(e) => handleCharacterArrayChange("weapons", 1, "", e.target.value)} /></td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <p>If holding Weapon and appropriate Weaponskill in combat +2CS</p>
+                              <p>If Combat entered carrying no Weapon -4CS</p>
                             </div>
-                            <div>
-                              <label>Endurance Points</label>
-                              <input type="text" value={character.endurance}/>
-                              <p>Can never go above initial score. 0 = dead</p>
+                            <div className="points">
+                              <div>
+                                <h4>Combat Skill</h4>
+                                <input type="number" maxLength={2} max={99} className="square" name="skill" value={character.skill} onChange={handleCharacterChange} />
+                              </div>
+                              <div className="combat-wolf">
+                                <span>{(character.endurance ?? 0) > 0 ? "🐺" : "💀"}</span>
+                              </div>
+                              <div>
+                                <h4>Endurance</h4>
+                                <input type="number" maxLength={2} max={99} className="square" name="endurance" value={character.endurance} onChange={handleCharacterChange} />
+                              </div>
                             </div>
-                            <h2>Weapons</h2>
-                            <div>
-                              <input type="text" value={character.weapons[0]} />
-                              <input type="text" value={character.weapons[1]} />
-                            </div>
-                            <p>
-                              If holding Weapon and appropriate Weaponskill in combat +2CS. If Combat entered carrying no Weapon -4CS.
-                            </p>
                           </div>
                           {/* Combat Record Table */}
                           <div className="combat-wrapper">
-                            <h2>Combat Record</h2>
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>Lone Wolf EP</th>
-                                  <th>Combat Ratio</th>
-                                  <th>Enemy EP</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {[...Array(5)].map((_, i) => (
-                                  <tr key={i} className={i % 2 === 0 ? "" : ""}>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
+                            <h4>Combat</h4>
+                            <div className="combat-event">
+                              <table>
+                                <thead>
+                                  <tr className="sub-header">
+                                    <th>Enemy</th>
+                                    <th>Skill</th>
+                                    <th>Endurance</th>
+                                    <th>Ratio</th>
+                                    <th>🎲</th>
+                                    <th>Enemy Lost</th>
+                                    <th>You Lost</th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                </thead>
+                                <tbody>
+                                  {(combatEnemies || []).map((enemy, index) => (
+                                    <tr key={index}>
+                                      <td title={enemy.skill == null ? "No skill" : enemy.dead ? "Dead" : "Alive"}>{enemy.skill == null ? "🪵" : enemy.dead ? "💀" : "🧌"}</td>
+                                      <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.skill ?? ""} onChange={(e) => handleEnemyArrayChange("skill", index, e.target.value)} /></td>
+                                      <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.endurance ?? ""} onChange={(e) => handleEnemyArrayChange("endurance", index, e.target.value)} /></td>
+                                      <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.ratio ?? ""} readOnly /></td>
+                                      <td>
+                                        <div className="dice-container">
+                                          <div className={`dice ${rollingCombatDice[index] ? "rolling no-events" : ""} wood-button`} data-dice="combat" id={`dice-${index}`} onClick={(e) => handleCombat(index)}>🎲</div>
+                                        </div>
+                                      </td>
+                                      <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.taken ?? ""} readOnly /></td>
+                                      <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.dealt ?? ""} readOnly /></td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
                         </div>
                       )}                      
-                      <div className="modal-controls">
-                        <button onClick={() => handleCharacterSave()} className="wood-button">{language === "br" ? "Salvar" : "Save"}</button>
-                        <button onClick={() => resetCharacter()} className="wood-button">{language === "br" ? "Limpar" : "Clear"}</button>
-                        <button onClick={() => setIsCharacterModalOpen(false)} className="wood-button">{language === "br" ? "Fechar" : "Close"}</button>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -760,6 +917,7 @@ export default function LoneWolfPWA() {
                       setExpandedSection(null);
                     }}>
                     <div className="modal-wrapper">
+                      <div onClick={() => setIsVisitedSectionsModalOpen(false)} className="close"></div>
                       <img src={`${import.meta.env.BASE_URL}images/background-modal.png`}></img>
                       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="title" style={{ "margin": "2rem"}}>{language === "br" ? "Sua jornada" : "Your journey"}</div>
@@ -783,7 +941,6 @@ export default function LoneWolfPWA() {
                             ))}
                           </ul>
                         </div>
-                        <button onClick={() => setIsVisitedSectionsModalOpen(false)} className="wood-button">{language === "br" ? "Fechar" : "Close"}</button>
                       </div>
                     </div>
                   </div>
@@ -798,11 +955,12 @@ export default function LoneWolfPWA() {
                     </div>
                   )}
                   <div className="map-container">
-                    <img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" onClick={toggleMap} ></img>
+                    <img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" onClick={() => setIsMapModalOpen(!isMapModalOpen)} ></img>
                   </div>
                   {isMapModalOpen && (
                     <div className="modal-overlay" onClick={() => { setIsMapModalOpen(false); }}>
                       <div className="modal-wrapper">
+                        <div onClick={() => setIsMapModalOpen(false)} className="close"></div>
                         <img src={`${import.meta.env.BASE_URL}${currentBook.id}/images/map.png`} style={{"borderRadius": "20px"}}></img>
                       </div>
                     </div>
@@ -839,8 +997,8 @@ export default function LoneWolfPWA() {
                 <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
                 {isDiceSection && (
                   <div className="dice-container">
-                    <div className={`dice ${rolling ? "rolling" : ""} wood-button`} onClick={rollDice}>
-                      {rolling ? "🎲" : result ?? "🎲"}
+                    <div className={`dice ${diceRolling ? "rolling no-events" : ""} wood-button`} onClick={rollParchmentDice}>
+                      {diceRolling ? "🎲" : diceResult ?? "🎲"}
                     </div>
                   </div>
                 )}
