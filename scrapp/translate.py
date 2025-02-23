@@ -9,17 +9,17 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 
 # Configurable book name
-BOOK_NAME = "ShadowOnTheSand"
-# FlightFromTheDark
-# FireOnTheWater
-# TheCavernsOfKalte
-# TheChasmOfDoom
-# ShadowOnTheSand
+BOOK_ID = "01fftd"
+# 01fftd - FlightFromTheDark    -- 350 SECTIONS
+# 02fotw - FireOnTheWater       -- 350 SECTIONS
+# 03tcok - TheCavernsOfKalte    -- 350 SECTIONS
+# 04tcod - TheChasmOfDoom       -- 350 SECTIONS
+# 05sots - ShadowOnTheSand      -- 400 SECTIONS
 
 # Folder paths
 TEXT_FOLDER = r"..\public\{}\text\{}"
-EN_TEXT_FOLDER = TEXT_FOLDER.format(BOOK_NAME, "en")
-BR_TEXT_FOLDER = TEXT_FOLDER.format(BOOK_NAME, "br")
+EN_TEXT_FOLDER = TEXT_FOLDER.format(BOOK_ID, "en")
+BR_TEXT_FOLDER = TEXT_FOLDER.format(BOOK_ID, "br")
 os.makedirs(BR_TEXT_FOLDER, exist_ok=True)
 
 # Options

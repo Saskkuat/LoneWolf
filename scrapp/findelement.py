@@ -1,11 +1,9 @@
 import os
 import re
 
-def find_html_files_with_a(folder_path):
+def find_combat_p_elements(folder_path):
     matching_files = []
-    a_pattern = re.compile(r'<a\b[^>]*>')
-    choice_p_pattern = re.compile(r'<p\s+class=["\']choice["\'].*?>.*?<a\b[^>]*>.*?</a>.*?</p>', re.DOTALL)
-    figure_pattern = re.compile(r'<figure.*?>.*?<a\b[^>]*>.*?</a>.*?</figure>', re.DOTALL)
+    combat_p_pattern = re.compile(r'<p\s+class=["\']combat["\'][^>]*>.*?</p>', re.DOTALL)
     
     for filename in os.listdir(folder_path):
         if filename.endswith(".html"):
@@ -13,24 +11,20 @@ def find_html_files_with_a(folder_path):
             with open(file_path, "r", encoding="utf-8") as file:
                 content = file.read()
                 
-                # Remove all <a> elements inside <p class="choice"> and <figure>
-                cleaned_content = re.sub(choice_p_pattern, '', content)
-                cleaned_content = re.sub(figure_pattern, '', cleaned_content)
-                
-                # Find remaining <a> elements
-                matches = a_pattern.findall(cleaned_content)
+                # Find all <p class="combat"> elements
+                matches = combat_p_pattern.findall(content)
                 if matches:
                     matching_files.append((filename, matches))
     
     return matching_files
 
 if __name__ == "__main__":
-    folder_path = "C:/Callisto/public/TheCavernsOfKalte/text/en"  # Change this to your target folder
+    folder_path = "C:/Callisto/LoneWolf/public/01fftd/text/en"  # Change this to your target folder
     
-    result = find_html_files_with_a(folder_path)
+    result = find_combat_p_elements(folder_path)
     
     if result:
-        print("Files containing <a> elements not inside <p class='choice'> or <figure>:")
+        print("Files containing <p class='combat'> elements:")
         for file, tags in result:
             print(f"- {file}")
             for tag in tags:

@@ -13,7 +13,6 @@ TOTAL_SECTIONS = None
 
 # Configurable book id and name
 BOOK_ID = "05sots"
-BOOK_NAME = "ShadowOnTheSand"
 # 01fftd - FlightFromTheDark    -- 350 SECTIONS
 # 02fotw - FireOnTheWater       -- 350 SECTIONS
 # 03tcok - TheCavernsOfKalte    -- 350 SECTIONS
@@ -24,7 +23,7 @@ BOOK_NAME = "ShadowOnTheSand"
 BASE_URL = rf"https://www.projectaon.org/en/xhtml/lw/{BOOK_ID}/"
 
 # Folder structure
-HTML_FOLDER = rf"..\public\{BOOK_NAME}\text\en"
+HTML_FOLDER = rf"..\public\{BOOK_ID}\text\en"
 IMAGE_FOLDER = os.path.join(HTML_FOLDER, "..", "..", "images")
 
 # Ensure folders exist

@@ -16,7 +16,7 @@ def find_html_files_with_classes(folder_path, classes):
     return matching_files
 
 if __name__ == "__main__":
-    folder_path = "C:/Callisto/LoboSolitario - Copy/FugaDaEscuridao/public/text/en"  # Change this to your target folder
+    folder_path = "C:/Callisto/LoneWolf/public/01fftd/text/en"  # Change this to your target folder
     classes_to_find = ["puzzle", "deadend"]
     
     result = find_html_files_with_classes(folder_path, classes_to_find)

@@ -1,7 +1,7 @@
 import os
 
 # Folder path
-FOLDER_PATH = r"C:\Callisto\lonewolf - 1 - fuga da escuridao\audios\br"
+FOLDER_PATH = r"C:/Callisto/LoneWolf/public/01fftd/audios/br"
 
 # Process each file in the folder
 for file_name in os.listdir(FOLDER_PATH):

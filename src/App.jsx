@@ -3,9 +3,11 @@ import booksData from './books.json';
 import characterTemplate from './character.json';
 import combatResultTable from './combat-results.json';
 import { useState, useEffect } from "react";
+import { useLanguage } from "./LanguageContext";
 import { Play, Pause, StopCircle, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function LoneWolfPWA() {  
+  const { language, setLanguage, t } = useLanguage();
   const validBooks = booksData;
   const [currentBook, setCurrentBook] = useState(() => {
     try {
@@ -16,9 +18,6 @@ export default function LoneWolfPWA() {
   });
   const [currentSection, setCurrentSection] = useState(() => {
     return parseInt(localStorage.getItem("currentSection")) || null;
-  });
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem("language") || "br";
   });
   const [visitedSections, setVisitedSections] = useState(() => {
     return JSON.parse(localStorage.getItem("visitedSections")) || [];
@@ -60,7 +59,6 @@ export default function LoneWolfPWA() {
   ]
   const [combatEnemies, setCombatEnemies] = useState(null);
   const [rollingCombatDice, setRollingCombatDice] = useState({});
-  const [combatDiceResult, setCombatDiceResult] = useState({});
 
   const setCurrentBookInfo = (bookId) => {
     const book = validBooks.find(e => e.id === bookId);
@@ -96,10 +94,8 @@ export default function LoneWolfPWA() {
     setCurrentSection(section || 0);
   };
 
-  const changeLanguage = () => {
-    const newLanguage = language === "br" ? "en" : "br";
-    setLanguage(newLanguage);
-    localStorage.setItem("language", newLanguage);
+  const toggleLanguage = () => {
+    setLanguage(language === "br" ? "en" : "br");
     stopAudio();
   };
 
@@ -311,6 +307,10 @@ export default function LoneWolfPWA() {
           }
           if (a.getAttribute("href").indexOf("map.htm") !== -1) {
             a.setAttribute("data-map", "true");
+            return;
+          }
+          if (a.getAttribute("href").indexOf("action.htm") !== -1) {
+            a.setAttribute("data-action", "true");
             return;
           }
           if (a.getAttribute("href").indexOf("title.htm") !== -1) {
@@ -531,6 +531,9 @@ export default function LoneWolfPWA() {
       else if (target.dataset["map"]) {
         handleMapClick();
       }
+      else if (target.dataset["action"]) {
+        handleCharacterModalOpen(true);
+      }
       else if (target.dataset["title"]) {
         handleNewBookClick(target);
       }
@@ -570,9 +573,43 @@ export default function LoneWolfPWA() {
   };
 
   const handleCharacterModalOpen = (open) => {
+    // Add enemies of the content
+    const newEnemies = [...combatEnemiesTemplate];
+    if (open) {
+      try {
+        const contentCombat = Array.from(document.querySelectorAll('p.combat')).map(p => {
+          const text = p.textContent;
+          let combatMatch, enduranceMatch;
+
+          if (language === "br") {
+              combatMatch = text.match(/HABILIDADE\s*DE\s*COMBATE\s*(\d+)/i);
+              enduranceMatch = text.match(/RESISTÊNCIA\s*(\d+)/i);
+          } else {
+              combatMatch = text.match(/COMBAT(?:\s*SKILL)?\s*(\d+)/i);
+              enduranceMatch = text.match(/ENDURANCE\s*(\d+)/i);
+          }
+
+          // Update the corresponding object in combatEnemiesTemplate
+          return {
+            skill: combatMatch ? parseInt(combatMatch[1], 10) : null,
+            endurance: enduranceMatch ? parseInt(enduranceMatch[1], 10) : null,
+            ratio: null,
+            taken: null,
+            dealt: null,
+            dead: false
+          };
+        });        
+
+        // Update newEnemies with the contentCombat data
+        newEnemies.splice(0, newEnemies.length -1, ...contentCombat); // Replace starting with the new data
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    
     setIsCharacterModalOpen(open); 
     setDiceResult(null); 
-    setCombatEnemies(combatEnemiesTemplate);
+    setCombatEnemies(newEnemies);
   };
 
   // Generic handler for input changes (numbers & strings)
@@ -676,14 +713,17 @@ export default function LoneWolfPWA() {
 
   return (
     <div className="app-container">
-      <button className="wood-button corner-bottom-right" onClick={changeLanguage}>{language.toUpperCase()}</button>      
-      <button className="wood-button corner-bottom-right" onClick={() => handleCharacterModalOpen(true)}>Player</button>
+      <div className="bottom-right-container">
+        <button className="wood-button" onClick={toggleLanguage} title={t("switchLanguage")}>{language.toUpperCase()}</button>
+        <button className="wood-button" onClick={() => handleCharacterModalOpen(!isCharacterModalOpen)}><img src={`${import.meta.env.BASE_URL}images/inventory.png`} alt="Map icon" title={t("showCharacter")} ></img></button>
+        <button className="wood-button" onClick={() => setIsMapModalOpen(!isMapModalOpen)}><img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" title={t("showMap")} ></img></button>
+      </div>
       {!currentBook && (
         <div className="book-container">
-          <div className="carved">{language == "br" ? "Lobo Solitário" : "Lone Wolf"}</div>
-          <div className="carved sub">{language == "br" ? "Selecione sua próxima aventura" : "Select your next adventure"}</div>
+          <div className="carved">{t("title")}</div>
+          <div className="carved sub">{t("selectAdventure")}</div>
           <button className="wood-button book-title" data-book-id="" onClick={(event) => {handleBookClick(event)}}>
-            {language == "br" ? "Escolha um livro" : "Choose a boook"}
+            {t("chooseBook")}
           </button>
           <div className="carousel">
             {validBooks && validBooks.map((book, index) => (
@@ -721,12 +761,12 @@ export default function LoneWolfPWA() {
                 <div className="parchment" style={{"marginTop": "0"}}></div>
                 <div className="content">
                   <div className="section-controls">
-                    <button onClick={changeSelectedBook} className="wood-button">{language === "br" ? "Selecionar outro livro" : "Select another book"}</button>
-                    <button onClick={startAdventure} className="wood-button">{language === "br" ? "Iniciar uma nova aventura" : "Start a new adventure"}</button>
+                    <button onClick={changeSelectedBook} className="wood-button">{t("selectAnotherBook")}</button>
+                    <button onClick={startAdventure} className="wood-button">{t("startAdventure")}</button>
                   </div>
                   <div className="text-content">
                     <div className="title" style={{"fontSize": "1.2em", "lineHeight": "2em", "marginTop": "1.2em"}}>
-                      {language == "br" ? "Ou selecione um capítulo" : "Or select a chapter"}
+                      {t("selectChapter")}
                     </div>                
                     <ul>
                       {[...Array((currentBook.sections || 0) + 1).keys()]
@@ -738,7 +778,7 @@ export default function LoneWolfPWA() {
                       ))}
                     </ul>
                   </div>
-                  <div className="wax-seal parchment-end">{language == "br" ? "LS" : "LW"}</div>
+                  <div className="wax-seal parchment-end">{t("signature")}</div>
                 </div>
               </div>
             </div>
@@ -751,9 +791,9 @@ export default function LoneWolfPWA() {
                     <div onClick={() => handleCharacterModalOpen(false)} className="close"></div>
                     <img src={`${import.meta.env.BASE_URL}images/background-modal.png`}></img>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>                      
-                      <div className="title" style={{ "margin": "2rem"}}>
-                        {language === "br" ? "Personagem" : "Character"}
-                        <button onClick={resetCharacter} className="wood-button">{language === "br" ? "Novo" : "New"}</button>
+                      <div className="title" style={{ "margin": "1rem"}}>
+                        {t("character")}
+                        <button onClick={resetCharacter} className="wood-button">{t("new")}</button>
                       </div>
                       {character && (
                         <div className="modal-overflow">
@@ -761,16 +801,16 @@ export default function LoneWolfPWA() {
                           <div className="backpack-wrapper">
                             <div className="pouch">
                               <div>
-                                <h4>Belt Pouch (max. 50)</h4>
+                                <h4>{t("beltPouch")} (max. 50)</h4>
                                 <input type="number"maxLength={2} max={50} className="square" name="coins" value={character.coins} onChange={handleCharacterChange} />
                               </div>
                               <div>
-                                <h4>Meals</h4>
+                                <h4>{t("meals")}</h4>
                                 <input type="number" maxLength={2} max={99} className="square" name="meals" value={character.meals} onChange={handleCharacterChange} />
                               </div>
                             </div>
                             <div className="backpack">
-                              <h4>Backpack Items</h4>
+                              <h4>{t("backpack")}</h4>
                               <table>
                                 <tbody>
                                   {[...Array(4)].map((_, index) => (
@@ -787,16 +827,16 @@ export default function LoneWolfPWA() {
                                   ))}
                                 </tbody>
                               </table>
-                              <p>Can be discarded when not in combat</p>
+                              <p>{t("canDiscart")}</p>
                             </div>
                           </div>
                           <div className="special-wrapper">
-                            <h4>Special Items</h4>
+                            <h4>{t("specialItems")}</h4>
                             <table>
                               <thead>
                                 <tr>
-                                  <th>Description</th>
-                                  <th>Known Effects</th>
+                                  <th>{t("description")}</th>
+                                  <th>{t("knowEffects")}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -815,12 +855,12 @@ export default function LoneWolfPWA() {
                           </div>
                           {/* Kai Disciplines */}
                           <div className="disciplines-wrapper">
-                            <h4>Kai Disciplines</h4>
+                            <h4>{t("kaiDisciplines")}</h4>
                             <table>
                               <thead>
                                 <tr>
-                                  <th>Name</th>
-                                  <th>Rank</th>
+                                  <th>{t("name")}</th>
+                                  <th>{t("rank")}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -840,7 +880,7 @@ export default function LoneWolfPWA() {
                           {/* Combat Skill, Endurance Points & Weapons */}
                           <div className="points-wrapper">
                             <div className="weapons">
-                              <h4>Weapons</h4>
+                              <h4>{t("weapons")}</h4>
                               <table>
                                 <tbody>
                                   <tr>
@@ -849,43 +889,43 @@ export default function LoneWolfPWA() {
                                   </tr>
                                 </tbody>
                               </table>
-                              <p>If holding Weapon and appropriate Weaponskill in combat +2CS</p>
-                              <p>If Combat entered carrying no Weapon -4CS</p>
+                              <p>{t("holdWeapon")}</p>
+                              <p>{t("noWeapon")}</p>
                             </div>
                             <div className="points">
                               <div>
-                                <h4>Combat Skill</h4>
+                                <h4>{t("combatSkill")}</h4>
                                 <input type="number" maxLength={2} max={99} className="square" name="skill" value={character.skill} onChange={handleCharacterChange} />
                               </div>
                               <div className="combat-wolf">
                                 <span>{(character.endurance ?? 0) > 0 ? "🐺" : "💀"}</span>
                               </div>
                               <div>
-                                <h4>Endurance</h4>
+                                <h4>{t("endurance")}</h4>
                                 <input type="number" maxLength={2} max={99} className="square" name="endurance" value={character.endurance} onChange={handleCharacterChange} />
                               </div>
                             </div>
                           </div>
                           {/* Combat Record Table */}
                           <div className="combat-wrapper">
-                            <h4>Combat</h4>
+                            <h4>{t("combat")}</h4>
                             <div className="combat-event">
                               <table>
                                 <thead>
                                   <tr className="sub-header">
-                                    <th>Enemy</th>
-                                    <th>Skill</th>
-                                    <th>Endurance</th>
-                                    <th>Ratio</th>
+                                    <th>{t("enemy")}</th>
+                                    <th>{t("skill")}</th>
+                                    <th>{t("endurance")}</th>
+                                    <th>{t("ratio")}</th>
                                     <th>🎲</th>
-                                    <th>Enemy Lost</th>
-                                    <th>You Lost</th>
+                                    <th>{t("enemy")} {t("lost")}</th>
+                                    <th>{t("you")} {t("lost")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {(combatEnemies || []).map((enemy, index) => (
                                     <tr key={index}>
-                                      <td title={enemy.skill == null ? "No skill" : enemy.dead ? "Dead" : "Alive"}>{enemy.skill == null ? "🪵" : enemy.dead ? "💀" : "🧌"}</td>
+                                      <td title={enemy.skill == null ? t("noSkill") : enemy.dead ? t("dead") : t("alive")}>{enemy.skill == null ? "🪵" : enemy.dead ? "💀" : "🧌"}</td>
                                       <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.skill ?? ""} onChange={(e) => handleEnemyArrayChange("skill", index, e.target.value)} /></td>
                                       <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.endurance ?? ""} onChange={(e) => handleEnemyArrayChange("endurance", index, e.target.value)} /></td>
                                       <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.ratio ?? ""} readOnly /></td>
@@ -909,8 +949,8 @@ export default function LoneWolfPWA() {
                 </div>
               )}
               <div className="section-controls">
-                <button onClick={() => setIsVisitedSectionsModalOpen(true)} className="wood-button">{language === "br" ? "Relembre sua jornada" : "Remember your journey"}</button>
-                <button onClick={resetSection} className="wood-button">{language === "br" ? "Reiniciar aventura" : "Restart adventure"}</button>
+                <button onClick={() => setIsVisitedSectionsModalOpen(true)} className="wood-button">{t("rememberJourney")}</button>
+                <button onClick={resetSection} className="wood-button">{t("restartAdventure")}</button>
                 {isVisitedSectionsModalOpen && (
                   <div className="modal-overlay" onClick={() => {
                       setIsVisitedSectionsModalOpen(false);
@@ -920,7 +960,7 @@ export default function LoneWolfPWA() {
                       <div onClick={() => setIsVisitedSectionsModalOpen(false)} className="close"></div>
                       <img src={`${import.meta.env.BASE_URL}images/background-modal.png`}></img>
                       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="title" style={{ "margin": "2rem"}}>{language === "br" ? "Sua jornada" : "Your journey"}</div>
+                        <div className="title" style={{ "margin": "2rem"}}>{t("yourJourney")}</div>
                         <div className="modal-overflow">
                           <ul>
                             {visitedSections.slice().reverse().map((section) => (
@@ -929,7 +969,7 @@ export default function LoneWolfPWA() {
                                   onClick={() => toggleSection(section)}
                                   className="section-toggle"
                                 >
-                                  {language === "br" ? "Capítulo" : "Chapter"} {section} {expandedSection === section ? <ChevronUp /> : <ChevronDown />}
+                                  {t("chapter")} {section} {expandedSection === section ? <ChevronUp /> : <ChevronDown />}
                                 </button>
                                 {expandedSection === section && (
                                   <div
@@ -954,9 +994,6 @@ export default function LoneWolfPWA() {
                       <div className="wax-seal">{currentSection}</div>
                     </div>
                   )}
-                  <div className="map-container">
-                    <img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" onClick={() => setIsMapModalOpen(!isMapModalOpen)} ></img>
-                  </div>
                   {isMapModalOpen && (
                     <div className="modal-overlay" onClick={() => { setIsMapModalOpen(false); }}>
                       <div className="modal-wrapper">
@@ -989,8 +1026,7 @@ export default function LoneWolfPWA() {
                 {currentSection == 0 && (
                   <div className="intro-content">
                     <p className="first intro">
-                        <span className="firstLetter">{language == "br" ? "O" : "T"}</span>
-                        <span className="intro">{language == "br" ? " caminho até aqui..." : "he story so far…"}</span>
+                        <span className="intro">{t("storySoFar")}</span>
                     </p>
                   </div>
                 )}
@@ -1005,7 +1041,7 @@ export default function LoneWolfPWA() {
                 {isCombatSection && (
                   <div>
                     <button onClick={() => toggleCombatRatio()} className="wood-button">
-                      {language === "br" ? "Tabela de combate" : "Combat table"}
+                      {t("combatTable")}
                     </button>
                     {expandedCombatRatio && (
                       <div className="combat-ratio-tables">

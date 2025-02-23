@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Caudex:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-@import url('https://fonts.googleapis.com/css?family=IM+Fell+English');
+@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
 @import url('https://fonts.googleapis.com/css?family=Pirata+One|Bilbo+Swash+Caps&display=swap');
 
 @font-face {
@@ -55,11 +55,29 @@ a {
     text-decoration: underline;
   }
 
-.corner-bottom-right {
+.bottom-right-container {
   position: fixed !important;
   bottom: 20px;
   right: 20px;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-content: center;
+  justify-content: space-around;
+  align-items: stretch;
+  gap: 1rem;
+  width: 3rem;
+  font-size: 1.5rem;
+  z-index: 2;
+}
+
+.bottom-right-container button {
+  height: 3rem;
+}
+
+.bottom-right-container img {
+  width: -webkit-fill-available;
 }
 
 .app-container {  
@@ -531,11 +549,21 @@ section#footnotes {
   right: 0;
   top: 1rem;
   cursor: pointer;
+  transition: all .2s ease-in-out;
 }
 
   .modal-wrapper .close::before {
    content: "\2718"; 
    font-size: 6rem;
+   color: #ca3011;
+   transition: all .2s ease-in-out;
+  }
+
+  .modal-wrapper .close:hover {
+    transform: scale(1.2);
+  }
+
+  .modal-wrapper .close:hover:before {
    color: red;
   }
   
@@ -682,6 +710,18 @@ section#footnotes {
   justify-content: space-around;
   align-items: center;
   margin-bottom: 2rem;
+}
+
+.backpack-wrapper input,
+.special-wrapper input,
+.disciplines-wrapper input,
+.points-wrapper input,
+.combat-wrapper input {
+  color: #000;
+  background-color: transparent;
+  border: solid 1px #b68e5f;
+  text-shadow: 0px 1px 0px rgba(255,255,255,.3), 0px -1px 0px rgba(0,0,0,.7); /* engraved text */
+  font-family: 'Permanent Marker';
 }
 
 input.square {
