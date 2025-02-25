@@ -519,6 +519,18 @@ section#footnotes {
   font-style: italic;
 }
 
+.no-discipline {
+  text-decoration: line-through;
+  background: rgba(255,0,0,0);
+  background: radial-gradient(circle, rgba(255,0,0,0.2) 0%, rgba(255,0,0,0) 100%);
+  pointer-events: none;
+}
+
+.no-discipline a {
+  color: inherit !important;
+  text-decoration: none;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;

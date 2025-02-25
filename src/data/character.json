@@ -14,7 +14,7 @@
         { "discipline": "", "rank": "" },
         { "discipline": "", "rank": "" }
     ],
-    "weapons": [ "", "" ],
+    "weapons": [ "axe", "" ],
     "coins": 0,
     "meals": 1,
     "backpack": [ "meal", "", "", "", "", "", "", "" ],

@@ -1,9 +1,10 @@
 import "./app.css";
-import booksData from './books.json';
-import weaponsData from './weapons.json';
-import findsData from './finds.json';
-import characterTemplate from './character.json';
-import combatResultTable from './combat-results.json';
+import booksData from './data/books.json';
+import weaponsData from './data/weapons.json';
+import findsData from './data/finds.json';
+import disciplinesChoices from "./data/disciplines-choices.json";
+import characterTemplate from './data/character.json';
+import combatResultTable from './data/combat-results.json';
 import { useState, useEffect } from "react";
 import { useLanguage } from "./LanguageContext";
 import { Play, Pause, StopCircle, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
@@ -356,6 +357,12 @@ export default function LoneWolfPWA() {
           if (doc.querySelector('span.external')) {
             setIsDiceSection(newIsDiceSection);
           }
+          
+          const choiceElements = checkForMatchingDisciplines(doc);
+          if (choiceElements) {
+            choiceElements.forEach((el) => el.classList.add("no-discipline"));
+          }
+
           setContent(doc.body.innerHTML);
         }
       })
@@ -371,6 +378,30 @@ export default function LoneWolfPWA() {
         }
       });
   }
+
+  const checkForMatchingDisciplines = (doc) => {
+    const choiceElements = doc.querySelectorAll("p.choice");
+
+    // Get character's disciplines based on selected language
+    const characterDisciplines = character.kai
+      .map((kaiItem) => disciplinesChoices[kaiItem.discipline]?.[language])
+      .filter(Boolean); // Remove empty values
+
+    // Get all possible Kai Discipline names from the JSON
+    const allKaiDisciplineNames = Object.values(disciplinesChoices).map((d) => d[language]);
+  
+    return Array.from(choiceElements).filter((el) => {
+      const text = el.textContent.trim();
+  
+      // Check if the text contains any valid Kai Discipline name
+      const isKaiDiscipline = allKaiDisciplineNames.some((discipline) => text.includes(discipline));
+  
+      // Check if the character does NOT have this discipline
+      const isMissing = !characterDisciplines.some((discipline) => text.includes(discipline));
+  
+      return isKaiDiscipline && isMissing;
+    });
+  };
 
   const fetchAudio = async (section) => {
 
@@ -584,9 +615,15 @@ export default function LoneWolfPWA() {
     setCurrentSection(newSection);
     if (character) {
       // Healing
-      if (character.kai.find(f => f == "5")) {
-        if (parseInt(character.enduranceMax) > 0 && parseInt(character.enduranceMax) > parseInt(character).endurance) {
-          character.endurance++;
+      const haveCombat = document.querySelector('p.combat');
+      if (character.kai.some(e => e.discipline == "5") && !haveCombat) {
+        if (parseInt(character.enduranceMax) >= 20 && parseInt(character.enduranceMax) > parseInt(character.endurance)) {
+          setCharacter((prev) => {
+            const updatedCharacter = { ...prev };
+            updatedCharacter.endurance++;
+            saveCharacter(updatedCharacter);
+            return updatedCharacter;
+          });
         }
       }
     }
@@ -622,6 +659,15 @@ export default function LoneWolfPWA() {
 
         // Update newEnemies with the contentCombat data
         newEnemies.splice(0, newEnemies.length -1, ...contentCombat); // Replace starting with the new data
+
+        if (character.new && character.endurance >= 20) {
+          setCharacter((prev) => {
+            const updatedCharacter = { ...prev };
+            updatedCharacter.new = false;
+            saveCharacter(updatedCharacter);
+            return updatedCharacter;
+          });
+        }
       } catch (e) {
         console.log(e);
       }
@@ -715,10 +761,15 @@ export default function LoneWolfPWA() {
       const updatedCharacter = { ...prev, [name]: value };
       
       if (name === "meals") {
-        const updatedMeals = updateMeals(prev.backpack, value);
-    
+        const updatedMeals = updateMeals(prev.backpack, value);    
         updatedCharacter.backpack = updatedMeals.backpack;
         updatedCharacter.meals = updatedMeals.meals;
+      } else if (name == "endurance") {
+        if (updatedCharacter.new) {
+          updatedCharacter.enduranceMax = value;
+        } else if (parseInt(updatedCharacter.endurance) > parseInt(updatedCharacter.enduranceMax)) {
+          updatedCharacter.endurance = updatedCharacter.enduranceMax;
+        }
       }
 
       saveCharacter(updatedCharacter);
@@ -746,12 +797,17 @@ export default function LoneWolfPWA() {
 
   // Handler for array inputs (Kai, Weapons, Backpack, Special)
   const handleCharacterArrayChange = (category, index, field, value) => {
-    if (!validateField(value, 99)) return;
+    if (!validateField(value, 100)) return;
 
     setCharacter((prev) => {
       const updatedArray = [...prev[category]];
       if (typeof updatedArray[index] === "object" || field) {
         updatedArray[index] = { ...updatedArray[index], [field]: value };
+
+        // If selecting a discipline and rank is empty, set a default rank
+        if (category === "kai" && field === "discipline" && !updatedArray[index].rank) {
+            updatedArray[index].rank = "5"; // Set your default rank here
+        }
       } else {
         updatedArray[index] = formatBackpackItem(value);
       }
