@@ -80,6 +80,14 @@ a {
   width: -webkit-fill-available;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.no-events {
+  pointer-events: none;
+}
+
 .app-container {  
   position: relative;
   width: 90vw;
@@ -584,9 +592,10 @@ section#footnotes {
 
 .modal-overflow {  
   overflow: auto;
-  width: 100%;
+  width: 98%;
   height: 85%;
   margin-bottom: 1.5rem;
+  margin-left: 1rem;
 }
   
 .modal-content ul {
@@ -742,12 +751,17 @@ input.square {
   align-items: center;
 }
 
-input.inventoria {
+input.inventoria,
+select.inventoria {
   width: 90%;
   outline: none;
   border-radius: 5px;
   font-size: 1.5rem;
   padding-left: .4rem;
+}
+
+.disciplines-wrapper td {
+  text-align: start;
 }
 
 .backpack td {
@@ -822,6 +836,7 @@ span.external {
 
 .dice.rolling {
   animation: rollAnimation 1.5s ease-out;
+  pointer-events: none;
 }
 
 @keyframes rollAnimation {
@@ -837,6 +852,13 @@ span.external {
   background: #e1d6b7;
 }
 
+.dice.disabled,
+.dice.disabled:hover {  
+  background-color: #c7c3c3;
+  border: none;
+  pointer-events: none;
+}
+
 .combat-ratio-tables {
   margin-top: 1em;
   display: flex;
@@ -847,11 +869,9 @@ span.external {
   align-items: center;
 }
 
-.no-events {
-  pointer-events: none;
+.blood-container {
+  display: block;
 }
-
-
 
 
 

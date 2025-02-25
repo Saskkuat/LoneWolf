@@ -1,6 +1,8 @@
 {
+    "new": true,
     "skill": 0,
     "endurance": 1,
+    "enduranceMax": 0,
     "kai": [
         { "discipline": "", "rank": "" },
         { "discipline": "", "rank": "" },
@@ -14,8 +16,8 @@
     ],
     "weapons": [ "", "" ],
     "coins": 0,
-    "meals": 0,
-    "backpack": [ "", "", "", "", "", "", "", "" ],
+    "meals": 1,
+    "backpack": [ "meal", "", "", "", "", "", "", "" ],
     "special": [
     ]
 }

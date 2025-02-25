@@ -1,5 +1,7 @@
 import "./app.css";
 import booksData from './books.json';
+import weaponsData from './weapons.json';
+import findsData from './finds.json';
 import characterTemplate from './character.json';
 import combatResultTable from './combat-results.json';
 import { useState, useEffect } from "react";
@@ -9,6 +11,8 @@ import { Play, Pause, StopCircle, RotateCcw, ChevronDown, ChevronUp } from "luci
 export default function LoneWolfPWA() {  
   const { language, setLanguage, t } = useLanguage();
   const validBooks = booksData;
+  const validWeapons = weaponsData;
+  const validFinds = findsData;
   const [currentBook, setCurrentBook] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("currentBook")) || null;
@@ -59,6 +63,9 @@ export default function LoneWolfPWA() {
   ]
   const [combatEnemies, setCombatEnemies] = useState(null);
   const [rollingCombatDice, setRollingCombatDice] = useState({});
+  const [rollingCharacterDice, setRollingCharacterDice] = useState({});
+  const [disabledCharacterDice, setDisabledCharacterDice] = useState({});
+  const [itemFound, setItemFound] = useState("");
 
   const setCurrentBookInfo = (bookId) => {
     const book = validBooks.find(e => e.id === bookId);
@@ -120,6 +127,11 @@ export default function LoneWolfPWA() {
   const resetCharacter = () => {
     localStorage.removeItem("character");
     setCharacter(characterTemplate);
+    setDisabledCharacterDice({});
+    setItemFound("");
+    
+    const charDices = document.querySelectorAll('[data-dice]')
+    charDices.forEach(e => e.innerText = "🎲");
   }
   
   useState(() => { loadCharacter(); }, [isCharacterModalOpen]);
@@ -307,15 +319,15 @@ export default function LoneWolfPWA() {
           }
           if (a.getAttribute("href").indexOf("map.htm") !== -1) {
             a.setAttribute("data-map", "true");
-            return;
+            if (!removeChoices) return;
           }
           if (a.getAttribute("href").indexOf("action.htm") !== -1) {
             a.setAttribute("data-action", "true");
-            return;
+            if (!removeChoices) return;
           }
           if (a.getAttribute("href").indexOf("title.htm") !== -1) {
             a.setAttribute("data-title", "true");
-            return;
+            if (!removeChoices) return;
           }
           const span = document.createElement("span");
           span.className = "external";
@@ -570,6 +582,14 @@ export default function LoneWolfPWA() {
   const handleChoiceClick = (target) => {
     const newSection = parseInt(target.getAttribute("href").replace("sect", "").replace(".htm", ""));
     setCurrentSection(newSection);
+    if (character) {
+      // Healing
+      if (character.kai.find(f => f == "5")) {
+        if (parseInt(character.enduranceMax) > 0 && parseInt(character.enduranceMax) > parseInt(character).endurance) {
+          character.endurance++;
+        }
+      }
+    }
   };
 
   const handleCharacterModalOpen = (open) => {
@@ -606,11 +626,84 @@ export default function LoneWolfPWA() {
         console.log(e);
       }
     }
-    
+
     setIsCharacterModalOpen(open); 
     setDiceResult(null); 
     setCombatEnemies(newEnemies);
   };
+
+  const handleCharacterDice = (index, event, target, add) => {
+    
+    if (!isCharacterModalOpen) return;
+
+    const dice = event.target;
+    if (!dice || dice.classList.contains('no-events')) return;
+
+    const charDices = document.querySelectorAll('[data-dice]')
+    charDices.forEach(e => e.classList.add('no-events'));
+
+    dice.innerText = "🎲";
+    setRollingCharacterDice((prev) => ({ ...prev, [index]: true }));
+    
+    // Simulate rolling time
+    setTimeout(() => {
+      const newRoll = rollDice();
+      dice.innerText = newRoll;
+      setRollingCharacterDice((prev) => ({ ...prev, [index]: false }));
+      charDices.forEach(e => e.classList.remove('no-events'));
+      setDisabledCharacterDice((prev) => ({ ...prev, [index]: true }));
+
+      setCharacter((prev) => {
+        if (target === "weaponSkill") {
+          const weaponParagraph = document.getElementById(target);
+          weaponParagraph.innerText = t(validWeapons[newRoll.toString()]);
+          return prev;
+        } else if (target === "find") {
+          const updatedCharacter = { ...prev };
+          const find = validFinds[newRoll];
+          // weapons
+          if ([0,1,5,7,8].includes(newRoll)) {
+            updatedCharacter.weapons[1] = find;
+          } 
+          // special
+          else if ([2,4].includes(newRoll)) {
+            const addEndurance = (find === "helmet" ? 2 : 4);
+            updatedCharacter.special.push({ "description": find, "effect": `endurance${addEndurance}` });
+            updatedCharacter.endurance += addEndurance;
+          } 
+          // meals
+          else if (newRoll === 3) {            
+            const updatedMeals = updateMeals(updatedCharacter.backpack, updatedCharacter.meals + 2);
+    
+            updatedCharacter.backpack = updatedMeals.backpack;
+            updatedCharacter.meals = updatedMeals.meals;
+          }
+          // healing
+          else if (newRoll === 6) {  
+            // Find the first empty slot
+            const emptyIndex = updatedCharacter.backpack.findIndex(item => item === "");
+
+            // If there's an empty slot, add the item
+            if (emptyIndex !== -1) {
+              updatedCharacter.backpack[emptyIndex] = find;
+            }
+          }
+          // coins
+          else if (newRoll === 9) {
+            updatedCharacter.coins += 12;
+          }
+
+          setItemFound(find);
+          saveCharacter(updatedCharacter);
+          return updatedCharacter;
+        } else {
+          const updatedCharacter = { ...prev, [target]: newRoll+add };
+          saveCharacter(updatedCharacter);
+          return updatedCharacter;
+        }
+      });
+    }, 1500); // Duration matches CSS animation
+  }
 
   // Generic handler for input changes (numbers & strings)
   const handleCharacterChange = (event) => {
@@ -620,10 +713,36 @@ export default function LoneWolfPWA() {
 
     setCharacter((prev) => {
       const updatedCharacter = { ...prev, [name]: value };
+      
+      if (name === "meals") {
+        const updatedMeals = updateMeals(prev.backpack, value);
+    
+        updatedCharacter.backpack = updatedMeals.backpack;
+        updatedCharacter.meals = updatedMeals.meals;
+      }
+
       saveCharacter(updatedCharacter);
       return updatedCharacter;
     });
   };
+
+  const updateMeals = (backpack, value) => {
+    const mealNames = ["meal", "refeição"];
+
+    // Remove old meals but keep blank spaces
+    let currentBackpack = backpack.map(item => 
+      mealNames.some(meal => meal.toLowerCase() === item.toLowerCase()) ? "" : item
+    );
+
+    // Count available slots (empty spaces)
+    let emptySlots = currentBackpack.filter(item => item === "").length;
+    let mealsToAdd = Math.min(value, emptySlots);
+
+    // Fill blank spaces with meals
+    currentBackpack = currentBackpack.map(item => (item === "" && mealsToAdd-- > 0 ? "meal" : item));
+
+    return { "backpack": currentBackpack, "meals": currentBackpack.filter(item => mealNames.includes(item)).length};
+  }
 
   // Handler for array inputs (Kai, Weapons, Backpack, Special)
   const handleCharacterArrayChange = (category, index, field, value) => {
@@ -634,12 +753,42 @@ export default function LoneWolfPWA() {
       if (typeof updatedArray[index] === "object" || field) {
         updatedArray[index] = { ...updatedArray[index], [field]: value };
       } else {
-        updatedArray[index] = value;
+        updatedArray[index] = formatBackpackItem(value);
       }
-      saveCharacter({ ...prev, [category]: updatedArray });
-      return { ...prev, [category]: updatedArray };
+
+      let updatedCharacter = { ...prev, [category]: updatedArray };
+    
+      if (category === "backpack") {
+        const mealNames = ["meal", "refeição"];
+    
+        // Normalize comparison (remove accents & lowercase)
+        const normalize = (str) => removeAccents(str.toLowerCase());
+    
+        // Count meals in backpack
+        const mealsCount = updatedArray.filter(item => 
+          mealNames.some(meal => normalize(meal) === normalize(item))
+        ).length;
+    
+        updatedCharacter.meals = mealsCount;
+      }
+      
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
     });
   };
+
+  const formatBackpackItem = (item) => {
+    const normalizedItem = removeAccents(item.toLowerCase());
+  
+    if (normalizedItem === "meal") return "Meal";
+    if (normalizedItem === "refeicao") return "Refeição";
+    if (normalizedItem === "refeição") return "Refeição";
+  
+    return item; // Keep other items unchanged
+  };
+
+  const removeAccents = (str) => 
+    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   const handleEnemyArrayChange = (category, index, value) => {
     if (!validateField(value, 2, 99)) return;
@@ -715,8 +864,8 @@ export default function LoneWolfPWA() {
     <div className="app-container">
       <div className="bottom-right-container">
         <button className="wood-button" onClick={toggleLanguage} title={t("switchLanguage")}>{language.toUpperCase()}</button>
-        <button className="wood-button" onClick={() => handleCharacterModalOpen(!isCharacterModalOpen)}><img src={`${import.meta.env.BASE_URL}images/inventory.png`} alt="Map icon" title={t("showCharacter")} ></img></button>
-        <button className="wood-button" onClick={() => setIsMapModalOpen(!isMapModalOpen)}><img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" title={t("showMap")} ></img></button>
+        <button className={`wood-button ${ !hasStarted || currentSection == null ? "hidden" : ""}`} onClick={() => handleCharacterModalOpen(!isCharacterModalOpen)}><img src={`${import.meta.env.BASE_URL}images/inventory.png`} alt="Map icon" title={t("showCharacter")}></img></button>
+        <button className={`wood-button ${ !hasStarted || currentSection == null ? "hidden" : ""}`} onClick={() => setIsMapModalOpen(!isMapModalOpen)}><img src={`${import.meta.env.BASE_URL}images/icon-map.png`} alt="Map icon" title={t("showMap")}></img></button>
       </div>
       {!currentBook && (
         <div className="book-container">
@@ -801,8 +950,9 @@ export default function LoneWolfPWA() {
                           <div className="backpack-wrapper">
                             <div className="pouch">
                               <div>
-                                <h4>{t("beltPouch")} (max. 50)</h4>
+                                <h4>{t("beltPouch")} ({t("max")} 50)</h4>
                                 <input type="number"maxLength={2} max={50} className="square" name="coins" value={character.coins} onChange={handleCharacterChange} />
+                                <div className={`dice wood-button ${[0,1].includes(currentSection) ? "" : "hidden"} ${rollingCharacterDice[0] ? "rolling" : ""} ${disabledCharacterDice[0] ? "disabled" : ""}`} style={{marginLeft: "1rem"}} data-dice="character" onClick={(e) => handleCharacterDice(0, e, "coins", 0)}>🎲</div>
                               </div>
                               <div>
                                 <h4>{t("meals")}</h4>
@@ -810,18 +960,22 @@ export default function LoneWolfPWA() {
                               </div>
                             </div>
                             <div className="backpack">
-                              <h4>{t("backpack")}</h4>
+                              <h4>
+                                {t("backpack")}
+                                <div className={`dice wood-button ${[0,1].includes(currentSection) ? "" : "hidden"} ${rollingCharacterDice[1] ? "rolling" : ""} ${disabledCharacterDice[1] ? "disabled" : ""}`} style={{marginLeft: "1rem"}} data-dice="character" onClick={(e) => handleCharacterDice(1, e, "find", 0)}>🎲</div>
+                              </h4>
+                              <p style={{ fontSize: "smaller", margin: "0"}} className={`${disabledCharacterDice[1] ? "" : "hidden"}`}>{`${t("youFound")} ${t(itemFound)}`}</p>
                               <table>
                                 <tbody>
                                   {[...Array(4)].map((_, index) => (
                                     <tr key={index}>
                                       <td style={{width: "5%"}}>{index + 1}</td>
                                       <td>
-                                        <input type="text" maxLength={100} className="inventoria" value={character.backpack[index]} onChange={(e) => handleCharacterArrayChange("backpack", index, "", e.target.value)} />
+                                        <input type="text" maxLength={100} className="inventoria" value={t(character.backpack[index])} onChange={(e) => handleCharacterArrayChange("backpack", index, "", e.target.value)} />
                                       </td>
                                       <td style={{width: "5%"}}>{index + 5}</td>
                                       <td>
-                                        <input type="text" maxLength={100} className="inventoria" value={character.backpack[index + 4]} onChange={(e) => handleCharacterArrayChange("backpack", index + 4, "", e.target.value)} />
+                                        <input type="text" maxLength={100} className="inventoria" value={t(character.backpack[index + 4])} onChange={(e) => handleCharacterArrayChange("backpack", index + 4, "", e.target.value)} />
                                       </td>
                                     </tr>
                                   ))}
@@ -843,10 +997,10 @@ export default function LoneWolfPWA() {
                                 {[...Array(character.special.length + 1)].map((_, index) => (
                                   <tr key={index}>
                                     <td>
-                                      <input type="text" maxLength={100} className="inventoria" value={ index < character.special.length ? character.special[index].description : "" } onChange={(e) => handleCharacterArrayChange("special", index, "description", e.target.value)} />
+                                      <input type="text" maxLength={100} className="inventoria" value={ index < character.special.length ? t(character.special[index].description) : "" } onChange={(e) => handleCharacterArrayChange("special", index, "description", e.target.value)} />
                                     </td>
                                     <td>
-                                      <input type="text" maxLength={100} className="inventoria" value={ index < character.special.length ? character.special[index].effect : "" } onChange={(e) => handleCharacterArrayChange("special", index, "effect", e.target.value)} />
+                                      <input type="text" maxLength={100} className="inventoria" value={ index < character.special.length ? t(character.special[index].effect) : "" } onChange={(e) => handleCharacterArrayChange("special", index, "effect", e.target.value)} />
                                     </td>
                                   </tr>
                                 ))}
@@ -859,18 +1013,53 @@ export default function LoneWolfPWA() {
                             <table>
                               <thead>
                                 <tr>
+                                  <th></th>
                                   <th>{t("name")}</th>
+                                  <th></th>
                                   <th>{t("rank")}</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {[...Array(character.kai.length)].map((_, index) => (
                                   <tr key={index}>
+                                    <td style={{width: "5%"}}>{index + 1}</td>
                                     <td>
-                                      <input type="text" maxLength={100} className="inventoria" value={ character.kai[index].discipline } onChange={(e) => handleCharacterArrayChange("kai", index, "discipline", e.target.value)} />
+                                      <select className="inventoria" value={ character.kai[index].discipline } onChange={(e) => handleCharacterArrayChange("kai", index, "discipline", e.target.value)}>
+                                        <option value=""></option>
+                                        <option value="1" disabled={character.kai.some(item => item.discipline === "1")}>{t("camouflage")}</option>
+                                        <option value="2" disabled={character.kai.some(item => item.discipline === "2")}>{t("hunting")}</option>
+                                        <option value="3" disabled={character.kai.some(item => item.discipline === "3")}>{t("sixthSense")}</option>
+                                        <option value="4" disabled={character.kai.some(item => item.discipline === "4")}>{t("tracking")}</option>
+                                        <option value="5" disabled={character.kai.some(item => item.discipline === "5")}>{t("healing")}</option>
+                                        <option value="6" disabled={character.kai.some(item => item.discipline === "6")}>{t("weaponSkill")}</option>
+                                        <option value="7" disabled={character.kai.some(item => item.discipline === "7")}>{t("mindShield")}</option>
+                                        <option value="8" disabled={character.kai.some(item => item.discipline === "8")}>{t("mindBlast")}</option>
+                                        <option value="9" disabled={character.kai.some(item => item.discipline === "9")}>{t("animalKinship")}</option>
+                                        <option value="10" disabled={character.kai.some(item => item.discipline === "10")}>{t("mindOverMatter")}</option>
+                                      </select>
+                                      {character.kai[index].discipline === "6" && ( // Show only if "weaponSkill" is selected
+                                        <p style={{ fontSize: "smaller", margin: "0"}} id="weaponSkill"></p>
+                                      )}
                                     </td>
                                     <td>
-                                      <input type="text" maxLength={100} className="inventoria" value={ character.kai[index].rank } onChange={(e) => handleCharacterArrayChange("kai", index, "rank", e.target.value)} />
+                                      {character.kai[index].discipline === "6" && ( // Show only if "weaponSkill" is selected
+                                        <div className={`dice wood-button ${[0,1].includes(currentSection) ? "" : "hidden"} ${rollingCharacterDice[2] ? "rolling" : ""} ${disabledCharacterDice[2] ? "disabled" : ""}`} data-dice="character" onClick={(e) => handleCharacterDice(2, e, "weaponSkill", 0)}>🎲</div>
+                                      )}
+                                    </td>
+                                    <td>
+                                    <select className="inventoria" value={ character.kai[index].rank } onChange={(e) => handleCharacterArrayChange("kai", index, "rank", e.target.value)}>
+                                        <option value=""></option>
+                                        <option value="1" disabled={true}>{t("novice")}</option>
+                                        <option value="2" disabled={true}>{t("intuite")}</option>
+                                        <option value="3" disabled={true}>{t("doan")}</option>
+                                        <option value="4" disabled={true}>{t("acolyte")}</option>
+                                        <option value="5">{t("initiate")}</option>
+                                        <option value="6">{t("aspirant")}</option>
+                                        <option value="7">{t("guardian")}</option>
+                                        <option value="8">{t("journeyman")}</option>
+                                        <option value="9">{t("savant")}</option>
+                                        <option value="10">{t("master")}</option>
+                                      </select>
                                     </td>
                                   </tr>
                                 ))}
@@ -884,8 +1073,8 @@ export default function LoneWolfPWA() {
                               <table>
                                 <tbody>
                                   <tr>
-                                    <td><input type="text" maxLength={100} className="inventoria" value={character.weapons[0]} onChange={(e) => handleCharacterArrayChange("weapons", 0, "", e.target.value)} /></td>
-                                    <td><input type="text" maxLength={100} className="inventoria" value={character.weapons[1]} onChange={(e) => handleCharacterArrayChange("weapons", 1, "", e.target.value)} /></td>
+                                    <td><input type="text" maxLength={100} className="inventoria" value={t(character.weapons[0])} onChange={(e) => handleCharacterArrayChange("weapons", 0, "", e.target.value)} /></td>
+                                    <td><input type="text" maxLength={100} className="inventoria" value={t(character.weapons[1])} onChange={(e) => handleCharacterArrayChange("weapons", 1, "", e.target.value)} /></td>
                                   </tr>
                                 </tbody>
                               </table>
@@ -896,13 +1085,15 @@ export default function LoneWolfPWA() {
                               <div>
                                 <h4>{t("combatSkill")}</h4>
                                 <input type="number" maxLength={2} max={99} className="square" name="skill" value={character.skill} onChange={handleCharacterChange} />
+                                <div className={`dice wood-button ${[0,1].includes(currentSection) ? "" : "hidden"} ${rollingCharacterDice[3] ? "rolling" : ""} ${disabledCharacterDice[3] ? "disabled" : ""}`} style={{marginLeft: "1rem"}} data-dice="character" onClick={(e) => handleCharacterDice(3, e, "skill", 10)}>🎲</div>
                               </div>
                               <div className="combat-wolf">
                                 <span>{(character.endurance ?? 0) > 0 ? "🐺" : "💀"}</span>
                               </div>
                               <div>
-                                <h4>{t("endurance")}</h4>
+                                <h4>{`${t("endurance")} ${character.enduranceMax > 0 ? `(${t("max")} ${character.enduranceMax})` : ""}`}</h4>
                                 <input type="number" maxLength={2} max={99} className="square" name="endurance" value={character.endurance} onChange={handleCharacterChange} />
+                                <div className={`dice wood-button ${[0,1].includes(currentSection) ? "" : "hidden"} ${rollingCharacterDice[4] ? "rolling" : ""} ${disabledCharacterDice[4] ? "disabled" : ""}`} style={{marginLeft: "1rem"}} data-dice="character" onClick={(e) => handleCharacterDice(4, e, "endurance", 20)}>🎲</div>
                               </div>
                             </div>
                           </div>
@@ -931,7 +1122,7 @@ export default function LoneWolfPWA() {
                                       <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.ratio ?? ""} readOnly /></td>
                                       <td>
                                         <div className="dice-container">
-                                          <div className={`dice ${rollingCombatDice[index] ? "rolling no-events" : ""} wood-button`} data-dice="combat" id={`dice-${index}`} onClick={(e) => handleCombat(index)}>🎲</div>
+                                          <div className={`dice ${rollingCombatDice[index] ? "rolling" : ""} wood-button`} data-dice="combat" id={`dice-${index}`} onClick={(e) => handleCombat(index)}>🎲</div>
                                         </div>
                                       </td>
                                       <td><input type="number" maxLength={2} max={99} className="square" data-index={index} value={enemy.taken ?? ""} readOnly /></td>
@@ -973,7 +1164,7 @@ export default function LoneWolfPWA() {
                                 </button>
                                 {expandedSection === section && (
                                   <div
-                                    className="section-content"
+                                    className="section-content no-events"
                                     dangerouslySetInnerHTML={{ __html: sectionContents[section] || "Loading..." }}
                                   />
                                 )}
@@ -1033,7 +1224,7 @@ export default function LoneWolfPWA() {
                 <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
                 {isDiceSection && (
                   <div className="dice-container">
-                    <div className={`dice ${diceRolling ? "rolling no-events" : ""} wood-button`} onClick={rollParchmentDice}>
+                    <div className={`dice ${diceRolling ? "rolling" : ""} wood-button`} onClick={rollParchmentDice}>
                       {diceRolling ? "🎲" : diceResult ?? "🎲"}
                     </div>
                   </div>
@@ -1052,7 +1243,7 @@ export default function LoneWolfPWA() {
                   </div>
                 )}
                 {isDeadEnd && (
-                  <div>
+                  <div className="blood-container">
                     <img src="images/blood.svg" alt="Blood" />
                   </div>
                 )}
