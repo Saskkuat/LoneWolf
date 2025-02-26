@@ -250,31 +250,6 @@ export default function LoneWolfPWA() {
   }, [currentBookIndex, language, currentBook])
 
   useEffect(() => {
-    const timeout = setTimeout(function() { 
-      parchmentHeight();
-    }, 25);    
-
-    return () => clearTimeout(timeout);
-  }, [currentBook, currentSection, content, expandedCombatRatio])
-
-  const parchmentHeight = () => {
-    const parchment = document.querySelector('.parchment');
-    const content = document.querySelector('.content');
-
-    if (!parchment || !content) return;
-  
-    // SVG feTurbulence can modify all others elements, for this reason "parchment" is in another <div> and in absolute position.
-    // so for a better effect, absolute height is defined by his content.
-    parchment.style.height = (content.offsetHeight + 150) + 'px';
-
-    window.addEventListener('resize', parchmentHeight);
-
-    return () => {
-      window.removeEventListener("resize", parchmentHeight);
-    };
-  }
-
-  useEffect(() => {
 
     if (!currentBook) return;
     localStorage.setItem("currentBook", JSON.stringify(currentBook));
@@ -961,9 +936,8 @@ export default function LoneWolfPWA() {
         <div>
           <div className="carved">{currentBook[`name-${language}`]}</div>
           {!hasStarted && (
-            <div>
-              <div className="chapters">
-                <div className="parchment" style={{"marginTop": "0"}}></div>
+            <div className="chapters">
+              <div className="parchment" style={{"marginTop": "0"}}>
                 <div className="content">
                   <div className="section-controls">
                     <button onClick={changeSelectedBook} className="wood-button">{t("selectAnotherBook")}</button>
@@ -1233,77 +1207,78 @@ export default function LoneWolfPWA() {
                   </div>
                 )}
               </div>
-              <div className="parchment"></div>
-              <div className="content">
-                <div className="section-controls">
-                  {currentSection != 0 && (
-                    <div className="title">
-                      <div className="wax-seal">{currentSection}</div>
-                    </div>
-                  )}
-                  {isMapModalOpen && (
-                    <div className="modal-overlay" onClick={() => { setIsMapModalOpen(false); }}>
-                      <div className="modal-wrapper">
-                        <div onClick={() => setIsMapModalOpen(false)} className="close"></div>
-                        <img src={`${import.meta.env.BASE_URL}${currentBook.id}/images/map.png`} style={{"borderRadius": "20px"}}></img>
-                      </div>
-                    </div>
-                  )}
-                  <div className="audio-player">
-                    <div className="audio-controls">
-                      <button onClick={togglePlayPause} className="wood-button">
-                        {isPlaying ? <Pause /> : <Play />}
-                      </button>
-                      <button onClick={stopAudio} className="wood-button">
-                        <StopCircle />
-                      </button>
-                      <button onClick={restartAudio} className="wood-button">
-                        <RotateCcw />
-                      </button>
-                    </div>
-                    <div className="audio-progress-bar" onClick={handleProgressBarClick} >
-                      <div
-                        className="audio-progress" style={{ width: `${audioProgress}%` }} />
-                    </div>
-                    <div className="audio-time">
-                      <span>{formatTime(Math.floor(audioProgress / 100 * audioDuration))} / {formatTime(Math.floor(audioDuration))}</span>
-                    </div>
-                  </div>
-                </div>
-                {currentSection == 0 && (
-                  <div className="intro-content">
-                    <p className="first intro">
-                        <span className="intro">{t("storySoFar")}</span>
-                    </p>
-                  </div>
-                )}
-                <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
-                {isDiceSection && (
-                  <div className="dice-container">
-                    <div className={`dice ${diceRolling ? "rolling" : ""} wood-button`} onClick={rollParchmentDice}>
-                      {diceRolling ? "🎲" : diceResult ?? "🎲"}
-                    </div>
-                  </div>
-                )}
-                {isCombatSection && (
-                  <div>
-                    <button onClick={() => toggleCombatRatio()} className="wood-button">
-                      {t("combatTable")}
-                    </button>
-                    {expandedCombatRatio && (
-                      <div className="combat-ratio-tables">
-                        <img alt="Combat ratio table - negative" className="max-w-full h-auto rounded-lg shadow" src="images/crtneg.png"></img>
-                        <img alt="Combat ratio table - positive" className="max-w-full h-auto rounded-lg shadow" src="images/crtpos.png"></img>
+              <div className="parchment">
+                <div className="content">
+                  <div className="section-controls">
+                    {currentSection != 0 && (
+                      <div className="title">
+                        <div className="wax-seal">{currentSection}</div>
                       </div>
                     )}
+                    {isMapModalOpen && (
+                      <div className="modal-overlay" onClick={() => { setIsMapModalOpen(false); }}>
+                        <div className="modal-wrapper">
+                          <div onClick={() => setIsMapModalOpen(false)} className="close"></div>
+                          <img src={`${import.meta.env.BASE_URL}${currentBook.id}/images/map.png`} style={{"borderRadius": "20px"}}></img>
+                        </div>
+                      </div>
+                    )}
+                    <div className="audio-player">
+                      <div className="audio-controls">
+                        <button onClick={togglePlayPause} className="wood-button">
+                          {isPlaying ? <Pause /> : <Play />}
+                        </button>
+                        <button onClick={stopAudio} className="wood-button">
+                          <StopCircle />
+                        </button>
+                        <button onClick={restartAudio} className="wood-button">
+                          <RotateCcw />
+                        </button>
+                      </div>
+                      <div className="audio-progress-bar" onClick={handleProgressBarClick} >
+                        <div
+                          className="audio-progress" style={{ width: `${audioProgress}%` }} />
+                      </div>
+                      <div className="audio-time">
+                        <span>{formatTime(Math.floor(audioProgress / 100 * audioDuration))} / {formatTime(Math.floor(audioDuration))}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                {isDeadEnd && (
-                  <div className="blood-container">
-                    <img src="images/blood.svg" alt="Blood" />
-                  </div>
-                )}
-              </div>
+                  {currentSection == 0 && (
+                    <div className="intro-content">
+                      <p className="first intro">
+                          <span className="intro">{t("storySoFar")}</span>
+                      </p>
+                    </div>
+                  )}
+                  <div className="text-content" dangerouslySetInnerHTML={{ __html: content }} />
+                  {isDiceSection && (
+                    <div className="dice-container">
+                      <div className={`dice ${diceRolling ? "rolling" : ""} wood-button`} onClick={rollParchmentDice}>
+                        {diceRolling ? "🎲" : diceResult ?? "🎲"}
+                      </div>
+                    </div>
+                  )}
+                  {isCombatSection && (
+                    <div>
+                      <button onClick={() => toggleCombatRatio()} className="wood-button">
+                        {t("combatTable")}
+                      </button>
+                      {expandedCombatRatio && (
+                        <div className="combat-ratio-tables">
+                          <img alt="Combat ratio table - negative" className="max-w-full h-auto rounded-lg shadow" src="images/crtneg.png"></img>
+                          <img alt="Combat ratio table - positive" className="max-w-full h-auto rounded-lg shadow" src="images/crtpos.png"></img>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {isDeadEnd && (
+                    <div className="blood-container">
+                      <img src="images/blood.svg" alt="Blood" />
+                    </div>
+                  )}
+                </div>
+              </div>              
             </div>
           )}
         </div>
